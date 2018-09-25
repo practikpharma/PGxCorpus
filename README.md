@@ -6,6 +6,7 @@ Annotation has been achieved by 11 annotators, including 5 senior annotators.
 Each sentence has been seen independently by 2 annotators, in a first phase, and by a third senior annotator, in a second phase.  
 
 * PGxCorpus is in the file [PGxCorpus.tar](PGxCorpus.tar), in the Brat file format. 
+* It can be browsed on our Brat server at https://pgxcorpus.loria.fr/.
 * It is also available on [FigShare](in preparation).
 
 ## Annotation guidelines
