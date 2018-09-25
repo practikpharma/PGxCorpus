@@ -14,6 +14,13 @@ The annotation guidelines were provided to the annotators to reduced the heterog
 
 * [annotation_guidelines.pdf](annotation_guidelines.pdf): Annotation guidelines
 
+## Source code of a baseline experiment
+
+The source code of a baseline experiment, reported in [1], is available in [./baseline_experiment/](./baseline_experiment/) 
+
+In preparation
+
+* [annotation_guidelines.pdf](annotation_guidelines.pdf): Annotation guidelines
 
 ## References
 
