@@ -20,8 +20,6 @@ The source code of the baseline experiment reported in [1], is available in [./b
 
 In preparation.
 
-* [annotation_guidelines.pdf](annotation_guidelines.pdf): Annotation guidelines
-
 ## References
 
 1. in preparation
