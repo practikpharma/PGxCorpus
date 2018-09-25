@@ -5,8 +5,8 @@ It is composed of 993 sentences mannually annotated, issued from 958 distinct Pu
 Annotation has been achieved by 11 annotators, including 5 senior annotators. 
 Each sentence has been seen independently by 3 annotators, including one senior.  
 
-PGxCorpus is in the file [PGxCorpus.tar](PGxCorpus.tar), in the Brat file format. 
-It is also available on [FigShare](in preparation).
+* PGxCorpus is in the file [PGxCorpus.tar](PGxCorpus.tar), in the Brat file format. 
+* It is also available on [FigShare](in preparation).
 
 ## Annotation guidelines
 
