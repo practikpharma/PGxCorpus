@@ -79,7 +79,7 @@ function _setlevel(node, contiguous)
 end
    
 --compute level in dag
---nodiscontiguous option allow to discard discontiguous entities
+--contiguous option allow to discard discontiguous entities
 function setlevel(ent, contiguous)
    --printdag(ent)
    --for i=1,#ent do
@@ -516,6 +516,7 @@ end
 local function load_entity_indices(entities, words, starts, ends, wordhash)
    assert(#entities==#words.idx and #entities==#starts and #entities==#ends, #entities .. " " .. #words.idx .. " " .. #starts .. " " .. #ends)
 
+   printw(words, wordhash)
    
    for i=1,#entities do
       _load_entity_indices(entities[i], starts[i], ends[i])

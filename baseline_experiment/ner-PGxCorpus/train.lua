@@ -135,22 +135,17 @@ end
 
 --------------------------DATA------------------------------
 local data = createdata(params, "train")
---local vdata = createdata(params, "valid")
---local tdata = createdata(params, "test")
-
-
--- for i=1,100 do
---    print(i)
---    print(data.labels_pubtator[i])
---    print(data.labels[i])
---    io.read()
--- end
--- exit()
-
 params.nlabel = #data.chunkhash
 params.nword = math.min(params.nword, #data.wordhash)
 params.ntags = params.tfsz~=0 and #data.taghash or nil
 
+--computing statistics abous discontiguous and nested entities
+for i=1,data.size do
+   print(data.entities[i])
+   print(data.entities[i][10].sons)
+   
+   io.read()
+end
 
 --computing max sentence size (in terms of words)
 local maxsize=0
