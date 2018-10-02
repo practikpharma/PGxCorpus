@@ -1,0 +1,10 @@
+Phenotype
+Disease
+Pharmacokinetic_phenotype
+Pharmacodynamic_phenotype
+Genomic_factor
+Genomic_variation
+Gene_or_protein
+Limited_variation
+Haplotype
+Chemical
