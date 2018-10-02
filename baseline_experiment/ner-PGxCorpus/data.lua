@@ -359,7 +359,7 @@ local function loadstartend(pathdata, feature, maxload)
    local handle = io.popen("find " .. pathdata .. " -name '*.txt' | sort")
    local filename = handle:read()
    while filename do
-      print(string.format('loading startend for <%s>', filename))
+      --print(string.format('loading startend for <%s>', filename))
       for line in io.lines(filename) do
 	 --print(line)
 	 if maxload and maxload > 0 and maxload == #starts then break end
@@ -517,7 +517,6 @@ local function load_entity_indices(entities, words, starts, ends, wordhash)
    assert(#entities==#words.idx and #entities==#starts and #entities==#ends, #entities .. " " .. #words.idx .. " " .. #starts .. " " .. #ends)
 
    for i=1,#entities do
-      printw(words[i], wordhash)
       _load_entity_indices(entities[i], starts[i], ends[i])
    end
    
