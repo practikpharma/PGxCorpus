@@ -20,8 +20,7 @@ wget https://github.com/practikpharma/PGxCorpus/raw/master/PGxCorpus_pubtator.ta
 
 tar xvf PGxCorpus_pubtator.tar
 
-
-cd -
+cd ../..
 
 ### Downloading and installing the lattice module for torch
 
