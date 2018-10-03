@@ -68,11 +68,9 @@ else
    torch.manualSeed(os.time())
 end
 
-
-print(params.onlylabel)
+params.best = 0
+params.last = 0
 params.onlylabel = loadstring("return " .. params.onlylabel)()
-print(params.onlylabel)
-
 torch.setnumthreads(1)
 
 local frestart
@@ -114,7 +112,7 @@ if params.goldorpred==nil then params.goldorpred="gold" end
 
 
 print("restart with : ")
-print("luajit train.lua -restart " .. string.format('%s/model.bin', rundir):gsub("=", "\\="))
+print("th train.lua -restart " .. string.format('%s/model.bin', rundir):gsub("=", "\\="))
 
 
 
@@ -140,6 +138,7 @@ params.nword = math.min(params.nword, #data.wordhash)
 params.ntags = params.tfsz~=0 and #data.taghash or nil
 
 
+
 --computing max sentence size (in terms of words)
 local maxsize=0
 for i=1,data.size do
@@ -156,11 +155,16 @@ local tdata = extract_data(data, params.validp, params.valids)
 --------------------------NETWORK---------------------------
 local networks
 local tagger
-
 if frestart then
    print('reloading network')
    networks = frestart:readObject()
    tagger = frestart:readObject()
+
+   local tab = testfunction(networks, tagger, params, vdata, "train")
+   print("Last score:\t" .. (params.last and params.last or "nil"))
+   print("Best scores:\t" .. params.best)
+   print("Computed score:\t" .. tab.macro_avg.f1)
+   print("")
 else
    local sizemax = 276
    print("creating network")
@@ -179,40 +183,6 @@ local networkssave = networks:clone("weight", "bias")
 local fcost = io.open(string.format('%s/cost', rundir), 'a')
 local fcostvalid = io.open(string.format('%s/cost-valid', rundir), 'a')
 local fcosttest = io.open(string.format('%s/cost-test', rundir), 'a')
-
-
-params.best = 0
-collectgarbage()
-
-if params.restart~="" then
-
-   params.brat = true
-   --params.verbose = true
-   local microf1, microprecision, microrecall, nolabelf1 = testfunction(networks, tagger, params, vdata, "valid")
-   print("valid score: " .. microf1, microprecision, microrecall)
-   print(res)
-   params.verbose = nil
-   
-   -- local f1, res = testfunction(networks, tagger, params, tdata, "test")
-   -- print("test score: " .. f1)
-   -- print(res)
-   
-   -- tagger.trans:zero()
-   -- tagger.stop:zero()
-
-   -- print("test restart zero")
-   -- local f1, res = testfunction(networks, tagger, params, vdata, "valid")
-   -- print("valid score: " .. f1)
-   -- print(res)
-   
-   -- local f1, res = testfunction(networks, tagger, params, tdata, "test")
-   -- print("test score: " .. f1)
-   -- print(res)
-   
-   --local f1 = testfunction(networks, tagger, params, data, "train")
-   --print("train score: " .. f1)
-   exit()
-end
 
 
 local input_perm = {}
@@ -504,56 +474,19 @@ for iter=1, params.iter do
       --networks:backwardUpdate(input, g, params.lr)
       
       ::continue::
-      
    end
    
    cost = cost/nex
-   
    print("nb skipped: " .. skip)
    print(string.format('# current cost = %.5f', cost))
    print(string.format('# ex/s = %.2f [%d ex over %d processed -- %.4g%%]', data.size/timer:time().real, nex, data.size, nex/data.size*100))
-
    fcost:write(cost .. "\n")
    fcost:flush()
 
-   print('saving: last model')
-   local f = torch.DiskFile(string.format('%s/model.bin', rundir), 'w'):binary()
-   f:writeObject(params)
-   f:writeObject(networkssave)
-   f:writeObject(tagger)
-   f:close()
-
-   local tab = testfunction(networks, tagger, params, data, "train")
-
-   print("=============================================== data")
-   for i=1,#data.entityhash do
-      local ent = data.entityhash[i] 
-      print(ent .. " " .. tab[ent].f1 .. " P " .. tab[ent].precision .. " r " .. tab[ent].recall)
-      f = io.open(string.format('%s/' .. ent .. '-train-f1', rundir), 'a')
-      f:write((tab[ent].f1==tab[ent].f1 and tab[ent].f1 or 0) .. "\n")
-      f:close()
-
-      f = io.open(string.format('%s/' .. ent .. '-train-precision', rundir), 'a')
-      f:write((tab[ent].precision==tab[ent].precision and tab[ent].precision or 0) .. "\n")
-      f:close()
-      
-      f = io.open(string.format('%s/' .. ent .. '-train-recall', rundir), 'a')
-      f:write((tab[ent].recall==tab[ent].recall and tab[ent].recall or 0) .. "\n")
-      f:close()
-   end
-   f = io.open(string.format('%s/train-macro-f1', rundir), 'a')
-   f:write((tab.macro_avg.f1==tab.macro_avg.f1 and tab.macro_avg.f1 or 0) .. "\n")
-   f:close()
-   f = io.open(string.format('%s/train-macro-precision', rundir), 'a')
-   f:write((tab.macro_avg.f1==tab.macro_avg.precision and tab.macro_avg.f1 or 0) .. "\n")
-   f:close()
-   f = io.open(string.format('%s/train-macro-recall', rundir), 'a')
-   f:write((tab.macro_avg.f1==tab.macro_avg.recall and tab.macro_avg.f1 or 0) .. "\n")
-   f:close()
-   print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
    
-
+   ------------------------ Computing performance on the validation corpus --------------------------
    local tab = testfunction(networks, tagger, params, vdata, "valid")
+   params.last = tab.macro_avg.f1
    
    print("=============================================== vdata")
    for i=1,#vdata.entityhash do
@@ -593,8 +526,44 @@ for iter=1, params.iter do
       f:close()
       
    end
+   
+   
+   ------------------------ Saving current model --------------------------
+   print('saving: last model')
+   local f = torch.DiskFile(string.format('%s/model.bin', rundir), 'w'):binary()
+   f:writeObject(params)
+   f:writeObject(networkssave)
+   f:writeObject(tagger)
+   f:close()
+   
+   ------------------------ Computing performance on the train corpus --------------------------
+   local tab = testfunction(networks, tagger, params, data, "train")
+   
+   print("=============================================== data")
+   for i=1,#data.entityhash do
+      local ent = data.entityhash[i] 
+      print(ent .. " " .. tab[ent].f1 .. " P " .. tab[ent].precision .. " r " .. tab[ent].recall)
+      f = io.open(string.format('%s/' .. ent .. '-train-f1', rundir), 'a')
+      f:write((tab[ent].f1==tab[ent].f1 and tab[ent].f1 or 0) .. "\n")
+      f:close()
 
-   
-   
-   
+      f = io.open(string.format('%s/' .. ent .. '-train-precision', rundir), 'a')
+      f:write((tab[ent].precision==tab[ent].precision and tab[ent].precision or 0) .. "\n")
+      f:close()
+      
+      f = io.open(string.format('%s/' .. ent .. '-train-recall', rundir), 'a')
+      f:write((tab[ent].recall==tab[ent].recall and tab[ent].recall or 0) .. "\n")
+      f:close()
    end
+   f = io.open(string.format('%s/train-macro-f1', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.f1 and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   f = io.open(string.format('%s/train-macro-precision', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.precision and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   f = io.open(string.format('%s/train-macro-recall', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.recall and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
+   
+end
