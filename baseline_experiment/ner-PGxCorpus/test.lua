@@ -551,8 +551,8 @@ function test(networks, tagger, params, data, corpus)
 	 
       tab_return[k] = {precision=precision, recall=recall, f1=f1, ent_total=v.ent_total, ent_tp=v.ent_tp, ent_fp=v.ent_fp}
 
-      avg_p = avg_p + precision
-      avg_r = avg_r + recall
+      avg_p = avg_p + (precision==precision and precision or 0)
+      avg_r = avg_r + (recall==recall and recall or 0)
    end
 
    avg_p = avg_p / #tab_ent

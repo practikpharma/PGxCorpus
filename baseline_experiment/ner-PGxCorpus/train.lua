@@ -151,7 +151,7 @@ end
 params.sizemax = maxsize
 
 local vdata = extract_data(data, params.validp, params.valids)
-
+local tdata = extract_data(data, params.validp, params.valids)
 
 --------------------------NETWORK---------------------------
 local networks
@@ -180,38 +180,9 @@ local fcost = io.open(string.format('%s/cost', rundir), 'a')
 local fcostvalid = io.open(string.format('%s/cost-valid', rundir), 'a')
 local fcosttest = io.open(string.format('%s/cost-test', rundir), 'a')
 
--- --------micro
--- --p
--- local fmicroprecisiontest = io.open(string.format('%s/micro-precision-test', rundir), 'a')
--- local fmicroprecisionvalid = io.open(string.format('%s/micro-precision-valid', rundir), 'a')
--- local fmicroprecision = io.open(string.format('%s/micro-precision', rundir), 'a')
-
--- --recall
--- local fmicrorecalltest = io.open(string.format('%s/micro-recall-test', rundir), 'a')
--- local fmicrorecallvalid = io.open(string.format('%s/micro-recall-valid', rundir), 'a')
--- local fmicrorecall = io.open(string.format('%s/micro-recall', rundir), 'a')
-
--- --f1
--- local fmicrof1test = io.open(string.format('%s/micro-f1-test', rundir), 'a')
--- local fmicrof1valid = io.open(string.format('%s/micro-f1-valid', rundir), 'a')
--- local fmicrof1 = io.open(string.format('%s/micro-f1', rundir), 'a')
-
--- --f1 label agnostic
--- local fnolabelf1test = io.open(string.format('%s/nolabel-f1-test', rundir), 'a')
--- local fnolabelf1valid = io.open(string.format('%s/nolabel-f1-valid', rundir), 'a')
--- local fnolabelf1 = io.open(string.format('%s/nolabel-f1', rundir), 'a')
-
-
-
 
 params.best = 0
-
 collectgarbage()
-
--- print("testing")
--- local f1 = testfunction(networks, tagger, params, tdata, "testa")
--- print("score: " .. f1)
-
 
 if params.restart~="" then
 
@@ -582,49 +553,47 @@ for iter=1, params.iter do
    print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
    
 
-   if true then
-      local tab = testfunction(networks, tagger, params, vdata, "valid")
+   local tab = testfunction(networks, tagger, params, vdata, "valid")
+   
+   print("=============================================== vdata")
+   for i=1,#vdata.entityhash do
+      local ent = vdata.entityhash[i] 
+      print(ent .. " " .. tab[ent].f1 .. " P " .. tab[ent].precision .. " r " .. tab[ent].recall)
+      f = io.open(string.format('%s/' .. ent .. '-valid-f1', rundir), 'a')
+      f:write((tab[ent].f1==tab[ent].f1 and tab[ent].f1 or 0) .. "\n")
+      f:close()
       
-      print("=============================================== vdata")
-      for i=1,#vdata.entityhash do
-	 local ent = vdata.entityhash[i] 
-	 print(ent .. " " .. tab[ent].f1 .. " P " .. tab[ent].precision .. " r " .. tab[ent].recall)
-	 f = io.open(string.format('%s/' .. ent .. '-valid-f1', rundir), 'a')
-	 f:write((tab[ent].f1==tab[ent].f1 and tab[ent].f1 or 0) .. "\n")
-	 f:close()
-	 
-	 f = io.open(string.format('%s/' .. ent .. '-valid-precision', rundir), 'a')
-	 f:write((tab[ent].precision==tab[ent].precision and tab[ent].precision or 0) .. "\n")
-	 f:close()
-	 
-	 f = io.open(string.format('%s/' .. ent .. '-valid-recall', rundir), 'a')
-	 f:write((tab[ent].recall==tab[ent].recall and tab[ent].recall or 0) .. "\n")
-	 f:close()
-      end
-      f = io.open(string.format('%s/valid-macro-f1', rundir), 'a')
-      f:write((tab.macro_avg.f1==tab.macro_avg.f1 and tab.macro_avg.f1 or 0) .. "\n")
+      f = io.open(string.format('%s/' .. ent .. '-valid-precision', rundir), 'a')
+      f:write((tab[ent].precision==tab[ent].precision and tab[ent].precision or 0) .. "\n")
       f:close()
-      f = io.open(string.format('%s/valid-macro-precision', rundir), 'a')
-      f:write((tab.macro_avg.f1==tab.macro_avg.precision and tab.macro_avg.f1 or 0) .. "\n")
+      
+      f = io.open(string.format('%s/' .. ent .. '-valid-recall', rundir), 'a')
+      f:write((tab[ent].recall==tab[ent].recall and tab[ent].recall or 0) .. "\n")
       f:close()
-      f = io.open(string.format('%s/valid-macro-recall', rundir), 'a')
-      f:write((tab.macro_avg.f1==tab.macro_avg.recall and tab.macro_avg.f1 or 0) .. "\n")
+   end
+   f = io.open(string.format('%s/valid-macro-f1', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.f1 and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   f = io.open(string.format('%s/valid-macro-precision', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.precision and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   f = io.open(string.format('%s/valid-macro-recall', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.recall and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
+   
+   if tab.macro_avg.f1>params.best then
+      print("better than ever: saving model")
+      params.best = tab.macro_avg.f1
+      
+      local f = torch.DiskFile(string.format('%s/model-best.bin', rundir), 'w'):binary()
+      f:writeObject(params)
+      f:writeObject(networkssave)
+      f:writeObject(tagger)
       f:close()
-      print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
-
-      if tab.macro_avg.f1>params.best then
-	 print("better than ever: saving model")
-	 params.best = tab.macro_avg.f1
-
-	 local f = torch.DiskFile(string.format('%s/model-best.bin', rundir), 'w'):binary()
-	 f:writeObject(params)
-	 f:writeObject(networkssave)
-	 f:writeObject(tagger)
-	 f:close()
-	 
-      end
       
    end
+
    
    
    
