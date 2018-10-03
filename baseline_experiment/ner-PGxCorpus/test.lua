@@ -445,124 +445,53 @@ function test(networks, tagger, params, data, corpus)
       -- print(entities_gold)
       -- io.read()
       
-      if false then
-	 --maximizing the number of match using the hopcroftKarp algorithm
-	 for e=1,#tab_ent do
-	    --print(tab_ent[e])
-	    local etype = tab_ent[e]
-	    local g = graph:graph(#entities_found,#entities_gold)
-	    local total_etype = 0
-	    for i=1,#entities_found do
-	       if entities_found[i][2]==etype then total_etype = total_etype + 1 end
-	       
-	       if entities_found[i].asso and entities_found[i][2]==etype then
-		  for j=1,#entities_found[i].asso do
-		     g:addEdge(i, entities_found[i].asso[j])
-		  end
-	       end
+      --maximizing the number of match using the hopcroftKarp algorithm
+      local g = graph:graph(#entities_found,#entities_gold)
+      local total_etype = 0
+      for i=1,#entities_found do
+	 if entities_found[i].asso then
+	    for j=1,#entities_found[i].asso do
+	       g:addEdge(i, entities_found[i].asso[j])
 	    end
-	    local nmatch = g:hopcroftKarp() --true positive match
-
-	    print("<<<<<=============================================================")
-	    print("entities_found")
-	    print(entities_found)
-	    print("entities_gold")
-	    print(entities_gold)
-	    print("nmatch")
-	    print(nmatch)
-	    print(g)
-	    print("=============================================================>>>>>>")
-	    
-	    for i=1,#g.pairV do
-	       local nmatch = 0
-	       if g.pairV[i]~=0 then
-		  nmatch = nmatch + 1
-		  print("entity " .. i .. " ( " .. entities_gold[i][2] .. " / \"" .. entities_gold[i][4] .. "\" ) in gold")
-		  print("\t is associated with")
-		  print("entity " .. g.pairV[i] .. " ( " .. entities_found[ g.pairV[i] ][2] .. " / \"" .. entities_found[ g.pairV[i] ][3] .. "\" ) in pred\n") 
-		  --if entities_gold[i][2]~=entities_found[ g.pairV[i] ][2] then print("diff"); io.read() end
-	       end
-	    end
-	    
-	    tab_entities[ etype ].ent_tp = tab_entities[ etype ].ent_tp + nmatch --nope
-	    
-	    local fp = total_etype - nmatch
-	    tab_entities[ etype ].ent_fp = tab_entities[ etype ].ent_fp + fp
-	 end
-
-	 
-	 for j=1,#entities_gold do
-	    --print(entities_gold[j])
-	    --print(tab_entities)
-	    tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
-	 end
-      else
-	 --maximizing the number of match using the hopcroftKarp algorithm
-	 local g = graph:graph(#entities_found,#entities_gold)
-	 local total_etype = 0
-	 for i=1,#entities_found do
-	    if entities_found[i].asso then
-	       for j=1,#entities_found[i].asso do
-		  g:addEdge(i, entities_found[i].asso[j])
-	       end
-	    end
-	 end
-	 local nmatch = g:hopcroftKarp() --true positive match
-	 
-	 -- print("<<<<<=============================================================")
-	 -- print("entities_found")
-	 -- print(entities_found)
-	 -- print("entities_gold")
-	 -- print(entities_gold)
-	 -- print("nmatch")
-	 -- print(nmatch)
-	 -- print(g)
-	 -- print("=============================================================>>>>>>")
-
-	 --adding validated associations in entities_found
-	 for i=1,#g.pairV do
-	    local nmatch = 0
-	    if g.pairV[i]~=0 then
-	       --print("entity " .. i .. " ( " .. entities_gold[i][2] .. " / \"" .. entities_gold[i][4] .. "\" ) in gold")
-	       --print("\t is associated with")
-	       --print("entity " .. g.pairV[i] .. " ( " .. entities_found[ g.pairV[i] ][2] .. " / \"" .. entities_found[ g.pairV[i] ][3] .. "\" ) in pred\n") 
-	       --if entities_gold[i][2]~=entities_found[ g.pairV[i] ][2] then print("diff"); io.read() end
-	       entities_found[ g.pairV[i] ].match = entities_gold[i]
-	    end
-	 end
-	 
-	 --computing tp and fp
-	 for i=1,#entities_found do
-	    if entities_found[i].match then
-	       tab_entities[ entities_found[i].match[2] ].ent_tp = tab_entities[ entities_found[i].match[2] ].ent_tp + 1
-	    else
-	       tab_entities[ entities_found[i][2] ].ent_fp = tab_entities[ entities_found[i][2] ].ent_fp + 1 
-	    end
-	 end
-	 
-	 --computing target positive (tp + fn) 
-	 for j=1,#entities_gold do
-	    tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
 	 end
       end
-
+      local nmatch = g:hopcroftKarp() --true positive match
 	 
+      -- print("<<<<<=============================================================")
+      -- print("entities_found")
+      -- print(entities_found)
+      -- print("entities_gold")
+	 -- print(entities_gold)
+      -- print("nmatch")
+      -- print(nmatch)
+      -- print(g)
+      -- print("=============================================================>>>>>>")
       
-      -- --print("---")
-      -- --print(chunksgold)
-      -- -- print(data.chunkhash)
-      -- -- print(data.chunkhash2)
-      -- -- io.read()
-      -- for i=1,#chunksgold do
-      -- 	 -- print(data.chunkhash2[chunksgold[i][2]])
-      -- 	 -- print(totals)
-      -- 	 -- print(totals[data.chunkhash2[chunksgold[i][2]]])
-      -- 	 totals[data.chunkhash2[chunksgold[i][2]]] = totals[data.chunkhash2[chunksgold[i][2]]] + 1
-      -- end
-
-      -- --print(chunksgold)
-
-      -- --print(lbl)
+      --adding validated associations in entities_found
+      for i=1,#g.pairV do
+	 local nmatch = 0
+	 if g.pairV[i]~=0 then
+	    --print("entity " .. i .. " ( " .. entities_gold[i][2] .. " / \"" .. entities_gold[i][4] .. "\" ) in gold")
+	    --print("\t is associated with")
+	    --print("entity " .. g.pairV[i] .. " ( " .. entities_found[ g.pairV[i] ][2] .. " / \"" .. entities_found[ g.pairV[i] ][3] .. "\" ) in pred\n") 
+	    --if entities_gold[i][2]~=entities_found[ g.pairV[i] ][2] then print("diff"); io.read() end
+	    entities_found[ g.pairV[i] ].match = entities_gold[i]
+	 end
+      end
+      
+      --computing tp and fp
+      for i=1,#entities_found do
+	 if entities_found[i].match then
+	    tab_entities[ entities_found[i].match[2] ].ent_tp = tab_entities[ entities_found[i].match[2] ].ent_tp + 1
+	 else
+	    tab_entities[ entities_found[i][2] ].ent_fp = tab_entities[ entities_found[i][2] ].ent_fp + 1 
+	 end
+      end
+      
+      --computing target positive (tp + fn) 
+      for j=1,#entities_gold do
+	 tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
+      end
 
       
       if params.brat then
@@ -586,41 +515,11 @@ function test(networks, tagger, params, data, corpus)
 	    counter_ent = counter_ent + #tabstartend
 	    fann:close()
 	 end
-
-	 
-	 
       end
-      
-      --io.read()
-      -- print("=============")
-      -- printw(words, data.wordhash)
-      -- print(words)
-      -- print(path)
-      -- print(lbl)
-      --print(tabchunks)
-
-      --io.read()
-      
-      -- for j=1,#tabstartend do 
-      --  	 output:write(indice .. "|" .. tabstartend[j][1] .. " " ..  tabstartend[j][2] .. "|")
-      -- 	 for i=1, #tabstartend[j][3] do
-      -- 	    output:write(tabstartend[j][3][i] .. " ")
-      -- 	 end
-      -- 	 output:write("\n")
-
-      -- 	 -- print(tabstartend[j][1])
-      -- 	 -- print(tabstartend[j][2])
-      -- 	 -- print(tabstartend[j][3])
-	 
-      -- 	 -- io.read()
-
-      -- end
-      --indice = findices:read()
    end
 
-   
-
    local tab_return = {}
+   local avg_p, avg_r = 0,0 --for macro average f1
    for i=1, #tab_ent do
       local k = tab_ent[i]
       local v = tab_entities[k]
@@ -651,27 +550,16 @@ function test(networks, tagger, params, data, corpus)
       -- print(f1)
 	 
       tab_return[k] = {precision=precision, recall=recall, f1=f1, ent_total=v.ent_total, ent_tp=v.ent_tp, ent_fp=v.ent_fp}
+
+      avg_p = avg_p + precision
+      avg_r = avg_r + recall
    end
 
-   
-   if params.brat then
-      print("brat transfer")
-      os.execute('ssh pgxbrat@pgxbrat.loria.fr "rm /home/pgxbrat/var/shared/data/sdata/gold/*.ann"')
-      os.execute('ssh pgxbrat@pgxbrat.loria.fr "rm /home/pgxbrat/var/shared/data/sdata/gold/*.txt"')
-      os.execute('ssh pgxbrat@pgxbrat.loria.fr "rm /home/pgxbrat/var/shared/data/sdata/pred/*.ann"')
-      os.execute('ssh pgxbrat@pgxbrat.loria.fr "rm /home/pgxbrat/var/shared/data/sdata/pred/*.txt"')
-      
-      os.execute("scp -r gold/* pgxbrat@pgxbrat.loria.fr:/home/pgxbrat/var/shared/data/sdata/gold > /dev/null")
-      os.execute("scp -r prediction/* pgxbrat@pgxbrat.loria.fr:/home/pgxbrat/var/shared/data/sdata/pred > /dev/null")
-      print("done")
-   end
-   
-   -- if params.verbose then
-   --    print("=============================================================================")
-   --    print("===================================RES==================================")
-   --    print("=============================================================================")
-   -- end
+   avg_p = avg_p / #tab_ent
+   avg_r = avg_r / #tab_ent
 
+   tab_return.macro_avg = {precision=avg_p, recall=avg_r, f1=(2*avg_p*avg_r)/(avg_p+avg_r)}
+   
    -- totals[totals:size(1)]=total_p
    
    -- local p = tp / (tp + fp)
@@ -689,25 +577,6 @@ function test(networks, tagger, params, data, corpus)
    
    --output:close()
    
-   --print(params.rundir)
-   --print("database/bin/conlleval < ".. params.rundir .. "/output_" .. corpus)
-   --local handle = io.popen("perl data/train/alt_eval.perl -gene " .. pathdata .. "GENE.eval -altgene " .. pathdata .. "ALTGENE.eval " .. params.rundir .. "/output_" .. corpus .. " | grep Precision:") 
-
-   -- --database/bin/conlleval < ".. params.rundir .. "/output_" .. corpus .. " | grep accuracy | sed 's/.*FB1:\\(.*\\)/\\1/'")
-   --local line = handle:read("*a")
-   --print("--" .. line:gsub(".*Recall: .* F: (.*)", "%1") .. "--")
-   --local f1 = line:gsub(".*Recall: .* F: (.*)", "%1")
-   --local precision = line:gsub("Precision: (.*) Recall.*", "%1")
-   --local recall = line:gsub("Precision: .* Recall: (.*) F:.*","%1")
-
-   -- if params.verbose then
-   --    print("true pos")
-   --    print(tps)
-   --    print("false pos")
-   --    print(fps)
-   --    print("total pos")
-   --    print(totals)
-   -- end
    
    -- local ps = tps:clone():add(fps:clone())
    -- ps = tps:clone():cdiv(ps)

@@ -97,7 +97,7 @@ if params.restart ~= '' then
       end
    end
 else
-   rundir = cmd:string('exp', params, {dir=true, loadnet=true, loadscorer=true, onlylabel=true})
+   rundir = cmd:string('exp', params, {dir=true, loadnet=true, loadscorer=true, onlylabel=true, data=true})
    if params.dir ~= '.' then
       rundir = params.dir .. '/' .. rundir
    end
@@ -150,6 +150,8 @@ end
 -- end
 params.sizemax = maxsize
 
+local vdata = extract_data(data, params.validp, params.valids)
+
 
 --------------------------NETWORK---------------------------
 local networks
@@ -200,7 +202,6 @@ local fcosttest = io.open(string.format('%s/cost-test', rundir), 'a')
 -- local fnolabelf1 = io.open(string.format('%s/nolabel-f1', rundir), 'a')
 
 
-local vdata = extract_data(data, params.validp, params.valids)
 
 
 params.best = 0
@@ -544,12 +545,12 @@ for iter=1, params.iter do
    fcost:write(cost .. "\n")
    fcost:flush()
 
-   -- print('saving: last model')
-   -- local f = torch.DiskFile(string.format('%s/model.bin', rundir), 'w'):binary()
-   -- f:writeObject(params)
-   -- f:writeObject(networkssave)
-   -- f:writeObject(tagger)
-   -- f:close()
+   print('saving: last model')
+   local f = torch.DiskFile(string.format('%s/model.bin', rundir), 'w'):binary()
+   f:writeObject(params)
+   f:writeObject(networkssave)
+   f:writeObject(tagger)
+   f:close()
 
    local tab = testfunction(networks, tagger, params, data, "train")
 
@@ -569,7 +570,17 @@ for iter=1, params.iter do
       f:write((tab[ent].recall==tab[ent].recall and tab[ent].recall or 0) .. "\n")
       f:close()
    end
-
+   f = io.open(string.format('%s/train-macro-f1', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.f1 and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   f = io.open(string.format('%s/train-macro-precision', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.precision and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   f = io.open(string.format('%s/train-macro-recall', rundir), 'a')
+   f:write((tab.macro_avg.f1==tab.macro_avg.recall and tab.macro_avg.f1 or 0) .. "\n")
+   f:close()
+   print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
+   
 
    if true then
       local tab = testfunction(networks, tagger, params, vdata, "valid")
@@ -577,7 +588,7 @@ for iter=1, params.iter do
       print("=============================================== vdata")
       for i=1,#vdata.entityhash do
 	 local ent = vdata.entityhash[i] 
-	 print(ent .. " " .. tab[ent].f1)
+	 print(ent .. " " .. tab[ent].f1 .. " P " .. tab[ent].precision .. " r " .. tab[ent].recall)
 	 f = io.open(string.format('%s/' .. ent .. '-valid-f1', rundir), 'a')
 	 f:write((tab[ent].f1==tab[ent].f1 and tab[ent].f1 or 0) .. "\n")
 	 f:close()
@@ -590,49 +601,31 @@ for iter=1, params.iter do
 	 f:write((tab[ent].recall==tab[ent].recall and tab[ent].recall or 0) .. "\n")
 	 f:close()
       end
+      f = io.open(string.format('%s/valid-macro-f1', rundir), 'a')
+      f:write((tab.macro_avg.f1==tab.macro_avg.f1 and tab.macro_avg.f1 or 0) .. "\n")
+      f:close()
+      f = io.open(string.format('%s/valid-macro-precision', rundir), 'a')
+      f:write((tab.macro_avg.f1==tab.macro_avg.precision and tab.macro_avg.f1 or 0) .. "\n")
+      f:close()
+      f = io.open(string.format('%s/valid-macro-recall', rundir), 'a')
+      f:write((tab.macro_avg.f1==tab.macro_avg.recall and tab.macro_avg.f1 or 0) .. "\n")
+      f:close()
+      print("macro average f1: " .. tab.macro_avg.f1 .. " P " .. tab.macro_avg.precision .. " r " .. tab.macro_avg.recall)
+
+      if tab.macro_avg.f1>params.best then
+	 print("better than ever: saving model")
+	 params.best = tab.macro_avg.f1
+
+	 local f = torch.DiskFile(string.format('%s/model-best.bin', rundir), 'w'):binary()
+	 f:writeObject(params)
+	 f:writeObject(networkssave)
+	 f:writeObject(tagger)
+	 f:close()
+	 
+      end
+      
    end
    
    
-   -- print("train score: " .. microf1)
-   -- fmicrof1:write(microf1 .. "\n")
-   -- fmicrof1:flush()
-   -- fmicroprecision:write(microprecision .. "\n")
-   -- fmicroprecision:flush()
-   -- fmicrorecall:write(microrecall .. "\n")
-   -- fmicrorecall:flush()
-   -- fnolabelf1:write(nolabelf1 .. "\n")
-   -- fnolabelf1:flush()
-
-   -- local microf1, microprecision, microrecall, nolabelf1 = testfunction(networks, tagger, params, vdata, "test")
-   -- print("---------------------------------------------------test score: f1=" .. microf1 .. " P=" .. microprecision .. " R=" .. microrecall)
-   -- fmicrof1valid:write(microf1 .. "\n")
-   -- fmicrof1valid:flush()
-   -- fmicroprecisionvalid:write(microprecision .. "\n")
-   -- fmicroprecisionvalid:flush()
-   -- fmicrorecallvalid:write(microrecall .. "\n")
-   -- fmicrorecallvalid:flush()
-   -- fnolabelf1valid:write(nolabelf1 .. "\n")
-   -- fnolabelf1valid:flush()
-
    
-   -- if true then
-   --    print(microf1)
-   --    print(params.best)
-   --    if microf1>params.best then
-   -- 	 params.best = microf1
-   -- 	 print('saving: best model')
-   -- 	 local f = torch.DiskFile(string.format('%s/model-best-valid.bin', rundir), 'w'):binary()
-   -- 	 f:writeObject(params)
-   -- 	 f:writeObject(networkssave)
-   -- 	 f:writeObject(tagger)
-   -- 	 f:close()
-   --    end
-      
-   -- end
-   -- if (iter-1)%10==0 then
-   --    local f1 = testfunction(networks, tagger, params, data, "train")
-   --    print("train score: " .. f1)
-   --    ftrain:write(f1 .. "\n")
-   --    ftrain:flush()
-   -- end
-end
+   end
