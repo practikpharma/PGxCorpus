@@ -37,7 +37,9 @@ local testfunction = test
 
 torch.setnumthreads(1)
 
-local handle = io.popen ("ls -1 " .. params.loaddir, "r")
+local cmd = "find " .. params.loaddir .. " -name model-best.bin"
+local handle = io.popen (cmd, "r")
+print(cmd)
 
 local data, vdata, tdata
 
@@ -48,18 +50,17 @@ for i=1,#tab_ent do
    tab_res[ tab_ent[i] ] = {f1={}, precision={}, recall={}}
 end
 
-
 local nbnet = 0
 _file = handle:read()
 print("----------------------------------------------")
 local paramsModel
 local nnetwork = 0
 while _file and nnetwork<params.maxnet do
-   if _file:match("^exp,") and _file:match(params.optnet) then
+   if _file:match(params.optnet) then
       nnetwork = nnetwork + 1
-      
+
       print(_file .. " net n°" .. nnetwork)
-      local f = torch.DiskFile(params.loaddir .. _file .. "/model-best.bin"):binary()
+      local f = torch.DiskFile(_file):binary()
       paramsModel = f:readObject()
       
       data = createdata(paramsModel)
@@ -72,10 +73,10 @@ while _file and nnetwork<params.maxnet do
       print("now testing net " .. nnetwork)
 
       paramsModel.rundir = params.loaddir .. paramsModel.rundir:match("/([^/]+)$")
-      print("================================ vdata")
-      local tab = testfunction(networks, tagger, paramsModel, vdata, "train")
-      for i=1,#vdata.entityhash do
-	 local ent = vdata.entityhash[i] 
+      print("================================ tdata")
+      local tab = testfunction(networks, tagger, paramsModel, tdata, "train")
+      for i=1,#tdata.entityhash do
+	 local ent = tdata.entityhash[i] 
 	 table.insert(tab_res[ent].f1, tab[ent].f1==tab[ent].f1 and tab[ent].f1 or 0)
 	 table.insert(tab_res[ent].precision, tab[ent].precision==tab[ent].precision and tab[ent].precision or 0)
 	 table.insert(tab_res[ent].recall, tab[ent].recall==tab[ent].recall and tab[ent].recall or 0)
@@ -87,8 +88,8 @@ end
 
 print(tab_res)
 
-for i=1,#vdata.entityhash do
-   local ent = vdata.entityhash[i] 
+for i=1,#tdata.entityhash do
+   local ent = tdata.entityhash[i] 
    
    local avg_p = torch.Tensor(tab_res[ent].precision):mean()
    local avg_r = torch.Tensor(tab_res[ent].recall):mean()
