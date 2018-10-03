@@ -49,6 +49,7 @@ local tab_res = {}
 for i=1,#tab_ent do
    tab_res[ tab_ent[i] ] = {f1={}, precision={}, recall={}}
 end
+tab_res.macro = {f1={}, precision={}, recall={}}
 
 local nbnet = 0
 _file = handle:read()
@@ -81,7 +82,10 @@ while _file and nnetwork<params.maxnet do
 	 table.insert(tab_res[ent].precision, tab[ent].precision==tab[ent].precision and tab[ent].precision or 0)
 	 table.insert(tab_res[ent].recall, tab[ent].recall==tab[ent].recall and tab[ent].recall or 0)
       end
-      
+      table.insert(tab_res.macro.recall, tab.macro_avg.recall)
+      table.insert(tab_res.macro.precision, tab.macro_avg.precision)
+      table.insert(tab_res.macro.f1, tab.macro_avg.f1)
+  
    end
    _file = handle:read()
 end
@@ -96,5 +100,10 @@ for i=1,#tdata.entityhash do
    local avg_f1 = torch.Tensor(tab_res[ent].f1):mean()
    local std_f1 = f_std(tab_res[ent].f1, avg_f1)
    print("p\t" .. string.format("%.2f",avg_p*100) .. "\tr\t" .. string.format("%.2f",avg_r*100) .. "\tf1\t" .. string.format("%.2f",avg_f1*100) .. " ( " .. string.format("%.2f",std_f1*100) .. " )\t" .. ent)
-   
 end
+
+local avg_p = torch.Tensor(tab_res.macro.precision):mean()
+local avg_r = torch.Tensor(tab_res.macro.recall):mean()
+local avg_f1 = torch.Tensor(tab_res.macro.f1):mean()
+local std_f1 = f_std(tab_res.macro.f1, avg_f1)
+print("p\t" .. string.format("%.2f",avg_p*100) .. "\tr\t" .. string.format("%.2f",avg_r*100) .. "\tf1\t" .. string.format("%.2f",avg_f1*100) .. " ( " .. string.format("%.2f",std_f1*100) .. " )\t" .. "macro")
