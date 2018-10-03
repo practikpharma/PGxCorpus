@@ -132,7 +132,7 @@ end
 
 
 --------------------------DATA------------------------------
-local data = createdata(params, "train")
+local data = createdata(params)
 params.nlabel = #data.chunkhash
 params.nword = math.min(params.nword, #data.wordhash)
 params.ntags = params.tfsz~=0 and #data.taghash or nil

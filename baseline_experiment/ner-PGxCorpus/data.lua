@@ -622,7 +622,7 @@ local marmothash
 local marmothashes
 local level1hash
 
-function createdata(params, corpus)
+function createdata(params)
    local data = {}
 
    local path = "data/"
