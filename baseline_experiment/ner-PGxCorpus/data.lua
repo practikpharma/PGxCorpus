@@ -655,7 +655,7 @@ function createdata(params)
 
    local file
    if params.task=="pgx" then
-      file = pathdata .. "/words.txt"
+      file = pathdata .. "/words.txt" -- notejo: is it still usefull?
    else
       error("unknown task")
    end
