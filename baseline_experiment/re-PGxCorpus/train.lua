@@ -178,8 +178,8 @@ params.nword = math.min(params.nword, #data.wordhash)
 
 local vdata, tdata
 if not params.notest then
-   local vdata = extract_data(data, params.validp, params.valids, true)
-   local tdata = extract_data(data, params.validp, params.valids, true)
+   vdata = extract_data(data, params.validp, params.valids, true)
+   tdata = extract_data(data, params.validp, params.valids, true)
 end
 local subtraindata = extract_data(data, params.validp, params.valids, false)
 
