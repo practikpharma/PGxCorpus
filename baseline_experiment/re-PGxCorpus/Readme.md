@@ -16,10 +16,6 @@ wget https://github.com/practikpharma/PGxCorpus/raw/master/PGxCorpus.tar
 
 tar xvf PGxCorpus.tar
 
-wget https://github.com/practikpharma/PGxCorpus/raw/master/PGxCorpus_pubtator.tar
-
-tar xvf PGxCorpus_pubtator.tar
-
 cd ../..	
 
 
