@@ -1,0 +1,12 @@
+PADDING
+O
+Gene_or_protein
+Chemical
+Phenotype
+Limited_variation
+Disease
+Pharmacodynamic_phenotype
+Genomic_variation
+Pharmacokinetic_phenotype
+Haplotype
+Genomic_factor

@@ -1,0 +1,10 @@
+null
+isAssociatedWith
+influences
+isEquivalentTo
+decreases
+treats
+causes
+increases
+metabolizes
+transports
