@@ -63,7 +63,7 @@ function test(network, data, params)
 	       table.insert(input, entities)
 	       
 	       local output
-	       output = network:forward(input, data.corpus)
+	       output = network:forward(input)
 	       
 	       local target = data.relations:isrelated(idx, ent1, ent2)
 

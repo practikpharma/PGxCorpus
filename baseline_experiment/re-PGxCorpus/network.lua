@@ -240,19 +240,19 @@ function createnetworks(params, data)
       end
    end
    
-   function network:forward(input, corpus)
+   function network:forward(input)
       self.rep = self.network:forward(input)
       return self.scorer:forward(self.rep)
    end
    
-   function network:backward(input, corpus, grad)
+   function network:backward(input,grad)
       print("grad")
       print(grad)
       local gradrep = self.scorer:backward(self.rep, grad)
       self.network:backward(input, gradrep)
    end
 
-   function network:backwardUpdate(input, corpus, grad, lr)
+   function network:backwardUpdate(input, grad, lr)
       local gradrep = self.scorer:backwardUpdate(self.rep, grad, lr)
       self.network:backwardUpdate(input, gradrep, lr)
    end

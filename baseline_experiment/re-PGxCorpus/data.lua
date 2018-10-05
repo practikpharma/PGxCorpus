@@ -692,97 +692,25 @@ function loadhash(params)
    
 end
 
-function createdata(params, corpus, trainortest, hashes)
+function createdata(params)
 
-
-   if false then
-      local fusr = {}
-      print(params.fusr)
-      for i=1,#params.fusr do
-	 fusr[params.fusr[i]]=i
-      end
-      
-      local relationhash
-      local parser = (not params.parser or params.parser=="stanford") and "corenlp.conll" or "McClosky.trees.ddg"
-      
-      local path, pathdata
-      local tot = "Train"
-      if params.mobius then
-	 local home = "/home/runuser"
-	 path = home .. "/corpus/PGxCorpus/"
-      else
-	 path = "/home/joel/Bureau/loria/corpus/PGxCorpus/"
-      end
-      pathdata = path .. "extracted/full/" 
-      
-      local anon = false
-      -- wordhash = wordhash or _loadhash(path .. 'hash' .. (anon and "_anon" or "") .. '/word.txt', params.nword)
-      -- entityhash = entityhash or _loadhash(path .. 'hash' .. (anon and "_anon" or "") .. '/entities.txt', nil)
-      relationhash = _loadhash(path .. 'hash' .. (anon and "_anon" or "") .. '/relations.txt', nil)
-      local weak = relationhash["weak_confidence_association"]
-      relationhash["strong_confidence_association"] = weak
-      relationhash["moderate_confidence_association"] = weak
-      
-      
-      -- poshash = poshash or _loadhash(path .. 'hash' .. (anon and "_anon" or "") .. '/pos.txt', nil)
-      --local ids = loadindices(pathdata .. "raw/" .. corpus .. "sentenceids.txt", params.maxload)
-      
-      local words  = loadwords(pathdata .. "/sentences." .. parser .. "_tree_sentences" , wordhash, params.addraw, wordfeature, params.maxload)
-      local entities = loadentities(pathdata .. "/entities.txt", words.sent, words.idx, entityhash, params.maxload, params.wsz)
-      
-      pad(words, (params.wsz-1)/2, wordhash.PADDING)
-      local relations = loadrelations(pathdata .. "/relations.txt", relationhash, params.maxload, params.wsz)
-      local trees = loadtrees(pathdata .. "/sentences." .. parser .. "_tree_comp_reps", params.maxload)
-      local trees2
-      
-      local pos
-      if params.pfsz~=0 then
-	 pos = loadwords(path .. "extracted/" .. tot .. "/sentences." .. parser .. "_tree_pos" , poshash, params.addraw, nil, params.maxload)
-	 pad(pos, (params.wsz-1)/2, poshash.PADDING)
-      end
-      
-      -- print(corpus)
-      -- print(tree2)
-      -- print(pos)
-      -- print(deptypes)
-      -- --print(trees) --ok
-      -- --print(words) --ok
-      -- --print(entities) --ok
-      -- --print(relations) --ok
-      -- --print(ids)
-      -- exit()
+   local pathdata = params.data
    
-      local select_data
-      if trainortest=="train" and params.select_data and params.select_data[corpus] then
-	 local f=torch.DiskFile(params.select_data[corpus])
-	 select_data = f:readObject()
-	 f:close()
-	 assert(#words.idx==#select_data)
-      end
-      
-      
-      return {select_data=select_data, corpus=corpus, trees2=trees2, pos=pos, trees=trees, words=words, poshash=poshash, wordhash=wordhash, deptypehash=deptypehash, entityhash=entityhash, relationhash=relationhash, entities=entities, relations=relations, size=#words.idx, ids=ids, get_relative_distance=get_relative_distance}
-   else
-
-      local pathdata = params.data
-      
-      local words = loadwords(pathdata, wordhash, params.addraw, wordfeature, params.maxload)
-      pad(words, (params.wsz-1)/2, wordhash.PADDING)
-      
-      local starts, ends = loadstartend(pathdata, nil, params.maxload)
-
-      local entities = loadentities(pathdata, ".ann",  params)
-      load_entity_indices(entities, words, starts, ends, wordhash)
-      
-      loaddag(entities)
-      
-      local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash)
-      print(relations)
-      
-      return {wordhash=wordhash, entityhash=entityhash, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
-      
-   end
-
+   local words = loadwords(pathdata, wordhash, params.addraw, wordfeature, params.maxload)
+   pad(words, (params.wsz-1)/2, wordhash.PADDING)
+   
+   local starts, ends = loadstartend(pathdata, nil, params.maxload)
+   
+   local entities = loadentities(pathdata, ".ann",  params)
+   load_entity_indices(entities, words, starts, ends, wordhash)
+   
+   loaddag(entities)
+   
+   local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash)
+   print(relations)
+   
+   return {wordhash=wordhash, entityhash=entityhash, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
+   
 end
 
 

@@ -56,7 +56,6 @@ cmd:option('-maxsize', math.huge, 'sentencesizemax')
 cmd:option('-notest', false, 'do not test')
 cmd:option('-debug', false, 'debug option for nngraph')
 cmd:option('-mobius', false, 'run on mobius')
-cmd:option('-corpus', '{full}', 'corpus to use')
 cmd:option('-parser', 'stanford', 'parser to use (stanford or McClosky)')
 cmd:option('-nosgd', false, 'no sgd')
 cmd:option('-time', false, 'time evaluation')
@@ -65,11 +64,8 @@ cmd:option('-debug2', false, 'debug2')
 cmd:option('-maxent', 1000, 'max entities in training sentence')
 cmd:option('-restartparams', '{}', 'max entities in training sentence')
 cmd:option('-niter', 100, 'max iter')
-cmd:option('-crossbalance', 0, 'cross corpus balance')
 cmd:option('-wszs', '{3,3,5,5}', 'corpus to test on')
 cmd:option('-channels', 1, '')
-cmd:option('-1r', 0, 'use only 1 specified relation for the additional corpus') --only for 1 additional corpus
-cmd:option('-select_data', '{}', 'fusion relations for the additional corpus')
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -85,16 +81,8 @@ else
 end
 
 
---params.select_data = params.select_data:gsub("{", "{\"")
---params.select_data = params.select_data:gsub("}", "\"}")
-params.select_data = params.select_data:gsub(" +", "")
---params.select_data = params.select_data:gsub(",", "\",\"")
 
 params.nhu = loadstring("return " .. params.nhu)()
---print(params.select_data)
-params.select_data = loadstring("return " .. params.select_data)()
---print(params.select_data)
---exit()
 
 params.wszs = loadstring("return " .. params.wszs)()  
 local restartparams = loadstring("return " .. params.restartparams)()
@@ -130,7 +118,7 @@ if params.restart ~= '' then
       params[k] = v
    end
 else
-   rundir = cmd:string('exp', params, {dir=true, nhu=true, select_data=true, restartparams=true, wszs=true})
+   rundir = cmd:string('exp', params, {dir=true, nhu=true, restartparams=true, wszs=true})
    rundir = rundir .. ",nhu={" .. params.nhu[1]
    for i=2,#params.nhu do
       rundir = rundir .. "-" .. params.nhu[i]
@@ -141,13 +129,6 @@ else
       rundir = rundir .. "-" .. params.wszs[i]
    end
    rundir = rundir .. "}"
-   --print(params.select_data)
-   if #params.select_data~=0 then
-      local toto = params.select_data["full"]:match("_([^_]+)$")
-      rundir = rundir .. ",select={" .. toto 
-      rundir = rundir .. "}"
-      rundir = rundir .. "}"
-   end
    if params.dir ~= '.' then
       rundir = params.dir .. '/' .. rundir
    end
@@ -166,7 +147,7 @@ print("/home/joel/torch/install/bin/luajit /home/joel/Bureau/loria/code/semeval2
 
 loadhash(params)
 
-local data = createdata(params, params.corpus, "train")
+local data = createdata(params)
 
 -- for i=1,data.size do
 --    print("====================================== " .. i)
@@ -300,7 +281,6 @@ while true do
 	       --this is not the pair of entities considered (see dataidx[ perm[i] ])
 	       --print("do not forward relation between " .. ent1 .. " and " .. ent2 .. " " .. idx) else print("do forward")
 	    else
-	       --print(_select(params, data, idx,ent1,ent2))
 	       if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) then
 		  --These entities are nested and thus not related
 		  -- print(data.entities[idx][ent1])
@@ -333,7 +313,7 @@ while true do
 		  if params.time then timer2:reset() end
 		  
 		  local output
-		  output = network:forward(input, data.corpus)
+		  output = network:forward(input)
 		  if params.time then timeforward = timeforward + timer2:time().real end
 		  
 		  local target = data.relations:isrelated(idx, ent1, ent2)
@@ -357,7 +337,7 @@ while true do
 		  
 		  		  network:zeroGradParameters()
 		  if params.time then timer2:reset() end
-		  network:backwardUpdate(input, data.corpus, grad, params.lr)
+		  network:backwardUpdate(input, grad, params.lr)
 		  if params.time then timebackward = timebackward + timer2:time().real end
 
 		  
