@@ -176,8 +176,11 @@ local data = createdata(params, params.corpus, "train")
 
 params.nword = math.min(params.nword, #data.wordhash)
 
-local vdata = extract_data(data, params.validp, params.valids, true)
-local tdata = extract_data(data, params.validp, params.valids, true)
+local vdata, tdata
+if not params.notest then
+   local vdata = extract_data(data, params.validp, params.valids, true)
+   local tdata = extract_data(data, params.validp, params.valids, true)
+end
 local subtraindata = extract_data(data, params.validp, params.valids, false)
 
 
@@ -423,9 +426,35 @@ while true do
    print("---------------------------------------Testing--------------------------------------------------")
 
 
+   print("*****************************Test on train***********************************")
+   --test on train
+   local fcost = io.open(rundir .. "/cost_train", 'a')
+   local f_macro_precision = io.open(rundir .. "/macro_precision_train", 'a')
+   local f_macro_recall = io.open(rundir .. "/macro_recall_train", 'a')
+   local f_macro_f1 = io.open(rundir .. "/macro_f1-score_train", 'a')
+   local f_micro_precision = io.open(rundir .. "/micro_precision_train", 'a')
+   local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
+   local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
+   
+   local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, subtraindata, params)
+   print("Train_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
+   print("Train_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+   
+   f_macro_precision:write(macro_p .. "\n"); f_macro_precision:flush()
+   f_macro_recall:write(macro_r .. "\n"); f_macro_recall:flush()
+   f_macro_f1:write(macro_f1 .. "\n"); f_macro_f1:flush()
+   f_micro_precision:write(micro_p .. "\n"); f_micro_precision:flush()
+   f_micro_recall:write(micro_r .. "\n"); f_micro_recall:flush()
+   f_micro_f1:write(micro_f1 .. "\n"); f_micro_f1:flush()
+   fcost:write(c .. "\n"); fcost:flush()
+   
+   fcost:close()
+   f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
+   f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
+   f1 = macro_f1
+   
    if not params.notest then
-
-     
+      
       print("============================================================================")
       print("================================now testing=================================")
       print("============================================================================")
@@ -467,34 +496,6 @@ while true do
 	 f:writeObject(networksave)
 	 f:close()
       end
-
-      
-      print("*****************************Test on train***********************************")
-      --test on train
-      local fcost = io.open(rundir .. "/cost_train", 'a')
-      local f_macro_precision = io.open(rundir .. "/macro_precision_train", 'a')
-      local f_macro_recall = io.open(rundir .. "/macro_recall_train", 'a')
-      local f_macro_f1 = io.open(rundir .. "/macro_f1-score_train", 'a')
-      local f_micro_precision = io.open(rundir .. "/micro_precision_train", 'a')
-      local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
-      local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
-      
-      local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, subtraindata, params)
-      print("Train_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-      print("Train_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
-      
-      f_macro_precision:write(macro_p .. "\n"); f_macro_precision:flush()
-      f_macro_recall:write(macro_r .. "\n"); f_macro_recall:flush()
-      f_macro_f1:write(macro_f1 .. "\n"); f_macro_f1:flush()
-      f_micro_precision:write(micro_p .. "\n"); f_micro_precision:flush()
-      f_micro_recall:write(micro_r .. "\n"); f_micro_recall:flush()
-      f_micro_f1:write(micro_f1 .. "\n"); f_micro_f1:flush()
-      fcost:write(c .. "\n"); fcost:flush()
-      
-      fcost:close()
-      f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
-      f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
-      f1 = macro_f1
 
       
       --test on test (bouhou!)
