@@ -21,6 +21,10 @@ The source code of the baseline experiment reported in [1], is available in [./b
 
 In preparation.
 
+## License
+
+PGxCorpus is under [Creative Commons BY NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
+
 ## References
 
 1. in preparation
