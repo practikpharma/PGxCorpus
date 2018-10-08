@@ -1,5 +1,48 @@
 require 'torch'
 
+function _setlevel(node, contiguous)
+   --print("---- " .. node[3])
+   if #node.sons==0 then
+      if contiguous and #node[1]>1 then --discontiguous entity
+	 --print(node[3] .. ' 1')
+	 node.level = 0
+	 return node.level
+      else
+	 --print(node[3] .. ' 2')
+	 node.level=1
+	 return node.level
+      end
+   else
+      local max_son = 0
+      for i=1,#node.sons do
+	 max_son = math.max(max_son, _setlevel(node.sons[i], contiguous))
+      end
+      if contiguous and #node[1]>1 then --discontiguous entity
+	 --print(node[3] .. ' 3')
+	 node.level = 0
+	 return max_son
+      else
+	 --print(node[3] .. ' 4')
+	 node.level = 1 + max_son
+	 return 1 + max_son
+      end
+   end
+end
+   
+--compute level in dag
+--contiguous option allow to discard discontiguous entities
+function setlevel(ent, contiguous)
+   --printdag(ent)
+   --for i=1,#ent do
+   --   print(ent[1])
+   --end
+   for i=1,#ent do
+      --print("=============" .. i)
+      _setlevel(ent[i], contiguous)
+   end
+end
+
+
 function _load_entity_indices(ents, starts, ends)
    --print("============")
    --print(ents)
@@ -693,7 +736,7 @@ function loadhash(params)
 end
 
 function createdata(params)
-
+   
    local pathdata = params.data
    
    local words = loadwords(pathdata, wordhash, params.addraw, wordfeature, params.maxload)
@@ -707,7 +750,6 @@ function createdata(params)
    loaddag(entities)
    
    local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash)
-   print(relations)
    
    return {wordhash=wordhash, entityhash=entityhash, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
    
