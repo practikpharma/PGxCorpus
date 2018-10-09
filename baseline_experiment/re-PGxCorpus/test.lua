@@ -37,6 +37,11 @@ function test(network, data, params)
       -- print(data.trees[idx])
       --print(data.ids[idx])
       --printw(data.words[idx], data.wordhash)
+
+      -- print(data.names[idx])
+      -- print(data.relations[idx])
+      -- print(data.entities[idx])
+      
       
       local words = data.words[idx]
       if (params.dp==2 or params.dp==3  or params.rnn=="lstm" or params.rnn=="cnn") then words = words:view(1,words:size(1)) end
@@ -136,7 +141,9 @@ function test(network, data, params)
 	    for k2, v2 in pairs(v1) do
 	       r = r + 1
 	       --print(k1 .. " " .. k2 .. " : " .. v2)
-	       fann:write("R" .. r .. "\t" .. data.relationhash[v2] .. " Arg1:T" .. k1 .. " Arg2:T" .. k2 .. "\n")
+	       local brat_ent1 = data.entities[idx][k1][3]
+	       local brat_ent2 = data.entities[idx][k2][3]
+	       fann:write("R" .. r .. "\t" .. data.relationhash[v2] .. " Arg1:" .. brat_ent1 .. " Arg2:" .. brat_ent2 .. "\n")
 	    end
 	 end
 	 fann:close()
@@ -159,14 +166,19 @@ function test(network, data, params)
 	 --print(relations_predicted)
 	 for k1,v1 in pairs(relations_predicted) do
 	    for k2, v2 in pairs(v1) do
+	       local brat_ent1 = data.entities[idx][k1][3]
+	       local brat_ent2 = data.entities[idx][k2][3]
 	       r = r + 1
 	       --print(k1 .. " " .. k2 .. " : " .. v2)
-	       fann:write("R" .. r .. "\t" .. data.relationhash[v2] .. " Arg1:T" .. k1 .. " Arg2:T" .. k2 .. "\n")
+	       fann:write("R" .. r .. "\t" .. data.relationhash[v2] .. " Arg1:" .. brat_ent1 .. " Arg2:" .. brat_ent2 .. "\n")
 	    end
 	 end
 	 fann:close()
 	 --io.read()
+
       end
+
+      --io.read()
       
    end
 
