@@ -716,7 +716,7 @@ function extract_data(data, percentage, sector)
 	    --table.remove(data[k].sent, start)
 	 end
 	 local newtabsent = {}
-	 if k=="words" or k=="pubtators" or k=="level1" then
+	 if k=="words" or k=="pubtators" then
 	    for i=1,subsize do
 	       table.insert(newtabsent, data[k].sent[start])
 	       table.remove(data[k].sent, start)

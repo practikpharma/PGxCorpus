@@ -1,5 +1,27 @@
 require 'torch'
 
+local function loadnames(pathdata, maxload)
+   print("loading names in " .. pathdata)
+   local indices = {}
+   local handle = io.popen("find " .. pathdata .. " -name '*.txt' | sort")
+   
+   local filename = handle:read()
+   while filename do
+      --print(string.format('loading <%s>', filename))
+      
+      if maxload and maxload > 0 and maxload == #indices then
+	 print("breakdata1")
+	 break
+      end
+      table.insert(indices, filename:match("/(%d+_%d+).txt"))
+      filename = handle:read()
+   end
+   handle:close()
+   collectgarbage()
+   return indices
+end
+
+
 function _setlevel(node, contiguous)
    --print("---- " .. node[3])
    if #node.sons==0 then
@@ -312,13 +334,13 @@ local function loadwords(pathdata, hash, addraw, feature, maxload)
       --print(string.format('loading <%s>', filename))
       for line in io.lines(filename) do
 	 --print(line)
-	 table.insert(sentences, line)
 	 if line~="" then
 	    if maxload and maxload > 0 and maxload == #indices then
 	       print("breakdata2")
 	       _break = true
 	       break
 	    end
+	    table.insert(sentences, line)
 	    local words = {}
 	    local wordsidx = {}
 	    for word in line:gmatch('(%S+)') do
@@ -398,6 +420,7 @@ end
 
 local function loadentities(pathdata, extention, params)
    local entities = {}
+   local mapping = {}
    
    local handle = io.popen("find " .. pathdata .. " -name '*" .. extention .. "' | sort")
    local filename = handle:read()
@@ -408,10 +431,11 @@ local function loadentities(pathdata, extention, params)
       end
 
       local ent = {}
+      local map = {}
       for line in io.lines(filename) do
-	 --print(line)
 	 if line:match("^T%d") then
 	    local _ent = line:match("^(T%d+)")
+	    local n_ent = _ent:match("%d+")
 	    local _w2 = line:match("^T%d+\t[^ ]+ %d+[^\t]+%d+\t(.*)")
 	    local _type = line:match("^T%d+\t([^ ]+) %d+ %d+")
 	    local bounds = line:match("^T%d+\t[^ ]+ (%d+[^\t]+%d+)")
@@ -421,14 +445,17 @@ local function loadentities(pathdata, extention, params)
 	    end
 	    -- local _start = line:match("^T%d+\t[^ ]+ (%d+)")
 	    -- local _end = line:match("^T%d+\t[^ ]+ %d+ (%d+)")
-
+	    
 	    table.insert(ent, {_bounds, _type, _ent, _w2})
+	    map[tonumber(n_ent)] = #ent
 	 end
       end
+
       -- print(ent)
       -- io.read()
       table.insert(entities, ent)
-
+      table.insert(mapping, map)
+      
       filename = handle:read()
    end
 
@@ -476,6 +503,8 @@ local function loadentities(pathdata, extention, params)
    entities.typeent = function(data, nsent, nent)
       return data.entities[nsent][nent][1]
    end
+
+   entities.mapping = mapping
    
    return entities
 end
@@ -675,7 +704,7 @@ function loadrelations_back(filename, hash, maxload, params)
    return relations
 end
 
-local function loadrelations(pathdata, extention, maxload, hash)
+local function loadrelations(pathdata, extention, maxload, hash, params, entities)
    local relations = {}
    local count = 0
 
@@ -689,7 +718,7 @@ local function loadrelations(pathdata, extention, maxload, hash)
 	 break
       end
 
-      local rel = {}
+      --local rel = {}
       for line in io.lines(filename) do
 	 if line:match("^R%d") then
 	    local ent1 = line:match("^R%d+\t[^ ]+ Arg1:T(%d+)")
@@ -697,12 +726,20 @@ local function loadrelations(pathdata, extention, maxload, hash)
 	    local _type = line:match("^R%d+\t([^ ]+) Arg1:T%d+ Arg2:T%d+")
 	    ent1 = tonumber(ent1)
 	    ent2 = tonumber(ent2)
-	    if relations[count][ent1]==nil then relations[count][ent1]={} end
-	    relations[count][ent1][ent2] = hash[_type]--, {_type, e2})
-	    if relations[count][ent2]==nil then relations[count][ent2]={} end
-	    relations[count][ent2][ent1] = hash[_type]--, {_type, e2})
+	    local _ent1 = entities.mapping[count][ent1]
+	    local _ent2 = entities.mapping[count][ent2]
+	    if _ent1>_ent2 then
+	       local temp = _ent2
+	       _ent2=_ent1
+	       _ent1=temp
+	    end
+	    assert(_ent1<_ent2)
+	    if relations[count][_ent1]==nil then relations[count][_ent1]={} end
+	    relations[count][_ent1][_ent2] = hash[_type]--, {_type, e2})
 
-	    table.insert(rel, {ent1, ent2})
+	    --if relations[count][ent2]==nil then relations[count][ent2]={} end
+	    --relations[count][ent2][ent1] = hash[_type]--, {_type, e2})
+	    --table.insert(rel, {ent1, ent2})
 	 end
       end
 
@@ -715,7 +752,11 @@ local function loadrelations(pathdata, extention, maxload, hash)
       --print(nsent)
       --print(e1)
       --print(e2)
-      return self[nsent][e1] and self[nsent][e1][e2] or hash["null"] 
+      if self[nsent][e1] and self[nsent][e1][e2] and params.onlylabel[ hash[self[nsent][e1][e2]] ] then
+	 return self[nsent][e1][e2]
+      else
+	 return hash["null"]
+      end
    end
 
    return relations
@@ -743,21 +784,24 @@ function createdata(params)
    pad(words, (params.wsz-1)/2, wordhash.PADDING)
    
    local starts, ends = loadstartend(pathdata, nil, params.maxload)
+
+   local names = loadnames(pathdata, params.maxload)
+   print(names)
    
    local entities = loadentities(pathdata, ".ann",  params)
    load_entity_indices(entities, words, starts, ends, wordhash)
    
    loaddag(entities)
    
-   local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash)
-   
-   return {wordhash=wordhash, entityhash=entityhash, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
+   local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash, params, entities)
+
+   return {names=names, wordhash=wordhash, entityhash=entityhash, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
    
 end
 
 
 function extract_data(data, percentage, sector, remove)
-
+   
    remove = remove or false
    print("Extracting data. Remove=" .. (remove and "true" or "false"))
    local size = data.size
@@ -779,14 +823,24 @@ function extract_data(data, percentage, sector, remove)
 	 for i=1,subsize do
 	    table.insert(newtab, data[k].idx[remove and start or (start+i-1)])
 	    if remove then table.remove(data[k].idx, start) end
-	    if remove then table.remove(data[k].sent, start) end
+	    --if remove then table.remove(data[k].sent, start) end
 	 end
-	 newdata[k] = {idx=newtab}
+	 local newtabsent = {}
+	 if k=="words" then
+	    for i=1,subsize do
+	       table.insert(newtabsent, data[k].sent[remove and start or (start+i-1)])
+	       if remove then table.remove(data[k].sent, start) end
+	       --table.remove(data[k].sent, start)
+	    end
+	 end
+
+	 
+	 newdata[k] = {idx=newtab, sent=newtabsent}
 	 setmetatable(newdata[k], getmetatable(data[k]))
       end
    end
 
-   local tabs = {entities=true,relations=true,ids=true}
+   local tabs = {entities=true,relations=true,ids=true, names=true}
    --local tabs = {words=true}
    
    -- if false then

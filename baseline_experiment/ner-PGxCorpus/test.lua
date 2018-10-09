@@ -237,7 +237,6 @@ function test(networks, tagger, params, data, corpus)
    if params.brat then
       os.execute("rm prediction/* gold/*")
    end
-
    
    for idx=1, data.size do
 

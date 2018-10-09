@@ -15,6 +15,10 @@ function test(network, data, params)
 	 network.dropout:evaluate()
       end
    end
+
+   if params.brat then
+      os.execute("rm prediction/* gold/*")
+   end
    
    local cost = 0
    local nforward = 0
@@ -43,6 +47,7 @@ function test(network, data, params)
 	 nforward = nforward + ((n * (n-1))/2)
       end      
 
+      local relations_predicted = {}
       
       for ent1=1,data.entities.nent(data,idx) do
 	 for ent2=ent1+1,data.entities.nent(data,idx) do
@@ -91,22 +96,98 @@ function test(network, data, params)
 		  precision_recall[indice].falsepos = precision_recall[indice].falsepos + 1
 	       end
 	       confusion_matrix[class][indice] = confusion_matrix[class][indice] + 1
-	       
+
+	       if params.brat then
+		  if indice~=data.relationhash["null"] then
+		     if not relations_predicted[ent1] then
+			relations_predicted[ent1] = {}
+		     end
+		     relations_predicted[ent1][ent2]=indice
+		  end
+	       end
 	    end
 	 end
       end
+
+      if params.brat then
+	 local fwords = io.open("gold/" .. data.names[idx] .. ".txt", "w")
+	 
+	 fwords:write(data.words.sent[idx])
+	 fwords:close()
+	 local fwords = io.open("prediction/" .. data.names[idx] .. ".txt", "w")
+	 fwords:write(data.words.sent[idx])
+	 fwords:close()
+
+	 --gold entities in gold file
+	 local fann = io.open("gold/" .. data.names[idx] .. ".ann", "w")
+	 for i=1,#data.entities[idx] do
+	    fann:write(data.entities[idx][i][3] .. "\t" ..data.entities[idx][i][2] .. " ")
+	    fann:write(data.entities[idx][i][1][1][1] .. " " .. data.entities[idx][i][1][1][2])
+	    for j=2,#data.entities[idx][i][1] do
+	       fann:write(";" .. data.entities[idx][i][1][j][1] .. " " .. data.entities[idx][i][1][j][2])
+	    end
+	    fann:write("\t" .. data.entities[idx][i][4] .. "\n")
+	 end
+	 
+	 --gold relation in gold
+	 local r = 0
+	 --print(data.relations[idx])
+	 for k1,v1 in pairs(data.relations[idx]) do
+	    for k2, v2 in pairs(v1) do
+	       r = r + 1
+	       --print(k1 .. " " .. k2 .. " : " .. v2)
+	       fann:write("R" .. r .. "\t" .. data.relationhash[v2] .. " Arg1:T" .. k1 .. " Arg2:T" .. k2 .. "\n")
+	    end
+	 end
+	 fann:close()
+
+	 
+	 --gold entities in pred file
+	 local fann = io.open("prediction/" .. data.names[idx] .. ".ann", "w")
+	 for i=1,#data.entities[idx] do
+	    fann:write(data.entities[idx][i][3] .. "\t" ..data.entities[idx][i][2] .. " ")
+	    fann:write(data.entities[idx][i][1][1][1] .. " " .. data.entities[idx][i][1][1][2])
+	    for j=2,#data.entities[idx][i][1] do
+	       fann:write(";" .. data.entities[idx][i][1][j][1] .. " " .. data.entities[idx][i][1][j][2])
+	    end
+	    fann:write("\t" .. data.entities[idx][i][4] .. "\n")
+	 end
+	 
+	 --pred relation in pred file
+	 --print(relations_predicted)
+	 local r = 0
+	 --print(relations_predicted)
+	 for k1,v1 in pairs(relations_predicted) do
+	    for k2, v2 in pairs(v1) do
+	       r = r + 1
+	       --print(k1 .. " " .. k2 .. " : " .. v2)
+	       fann:write("R" .. r .. "\t" .. data.relationhash[v2] .. " Arg1:T" .. k1 .. " Arg2:T" .. k2 .. "\n")
+	    end
+	 end
+	 fann:close()
+	 --io.read()
+      end
+      
    end
 
+
+	 
+   
    local t = timer:time().real
    print(string.format('test corpus processed in %.2f seconds (%.2f sentences/s)', t, data.size/t))
+
+
+      
    
    cost = cost/nforward
 
-   local class_to_consider
+   local class_to_consider = {}
    if params.onerelation then
       class_to_consider = {2}
-   else      
-      class_to_consider = {2,3,4,5,6,7,8,9,10}
+   else
+      for k,v in pairs(params.onlylabel) do
+	 table.insert(class_to_consider, data.relationhash[k])
+      end
    end
    
    --computing evaluation measures

@@ -66,6 +66,8 @@ cmd:option('-restartparams', '{}', 'max entities in training sentence')
 cmd:option('-niter', 100, 'max iter')
 cmd:option('-wszs', '{3,3,5,5}', 'corpus to test on')
 cmd:option('-channels', 1, '')
+cmd:option('-brat', false, "produce gold and prediction files in brat format")
+cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=true,decreases=true,treats=true,causes=true,increases=true,metabolizes=true,transports=true}', 'Only considers the labels given in option')
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -85,6 +87,8 @@ end
 params.nhu = loadstring("return " .. params.nhu)()
 
 params.wszs = loadstring("return " .. params.wszs)()  
+params.onlylabel = loadstring("return " .. params.onlylabel)()
+
 local restartparams = loadstring("return " .. params.restartparams)()
 
 
@@ -118,7 +122,7 @@ if params.restart ~= '' then
       params[k] = v
    end
 else
-   rundir = cmd:string('exp', params, {dir=true, nhu=true, restartparams=true, wszs=true})
+   rundir = cmd:string('exp', params, {onlylabel=true, dir=true, nhu=true, restartparams=true, wszs=true})
    rundir = rundir .. ",nhu={" .. params.nhu[1]
    for i=2,#params.nhu do
       rundir = rundir .. "-" .. params.nhu[i]
@@ -188,10 +192,10 @@ if frestart then
       net = frestart:readObject()
       network:loadnet(params, net)
    end
-   print("now testing")
-   local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, vdata, params)
-   print("Valid_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-   print("Valid_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+   -- print("now testing")
+   -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, vdata, params)
+   -- print("Valid_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
+   -- print("Valid_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
    
    local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
    print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
@@ -200,7 +204,7 @@ if frestart then
    -- print(p)
    -- print(r)
    -- print(f1)
-   -- exit()
+   exit()
 end
 --print(network.lookup)
 --print(network.lookup2)
@@ -267,6 +271,13 @@ while true do
 
       local words = data.words[idx]
 
+      -- print(data.names[idx])
+      -- print(data.relations[idx])
+      -- for i=1,#data.entities[idx] do
+      -- 	 print(i .. " " .. data.entities[idx][i][3])
+      -- end
+	    
+      
       local n_ent_pair = 0
       for ent1=1,data.entities.nent(data, idx) do
 	 for ent2=ent1+1,data.entities.nent(data, idx) do
@@ -274,6 +285,12 @@ while true do
 	    --print(nf)
 	    --printw(words, datas[1].wordhash)
 	    --print(data.relations[idx])
+
+	    -- print("============================")
+	    -- print(ent1 .. " " .. ent2)
+	    -- print(data.entities[idx][ent1][3])
+	    -- print(data.entities[idx][ent2][3])
+	    -- print(data.relations:isrelated(idx, ent1, ent2))
 	    
 	    n_ent_pair = n_ent_pair + 1
 	    
@@ -351,6 +368,8 @@ while true do
 	    --io.read()
 	 end
       end
+      --io.read()
+
       ::continue::
       
    end
@@ -416,7 +435,7 @@ while true do
    local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
    local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
    
-   local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, subtraindata, params)
+   local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, data, params) --subtraindata
    print("Train_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
    print("Train_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
    
@@ -503,14 +522,5 @@ while true do
       fcost:close()
       f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
       f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
-      
-   else
-      for i=1,#datas do
-	 if params.testc==0 or params.testc==i then
-	    local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, data, params)
-	    print("Train_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-	    print("Train_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
-	 end
-      end
    end
 end
