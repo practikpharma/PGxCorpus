@@ -1,6 +1,30 @@
 local inputwords = torch.Tensor()
 local inputentities = torch.Tensor()
 
+   
+local tab_rel = {"isAssociatedWith", "isExplainedBy", "treats", "transports", "influences", "increases", "decreases", "causes", "metabolizes", "isEquivalentTo", "relation"}
+local hierarchy_rel = {}
+for i=1,#tab_rel do
+   hierarchy_rel[tab_rel[i]] = {}
+   hierarchy_rel[tab_rel[i]][tab_rel[i]] = true
+end
+
+
+hierarchy_rel["influences"]["causes"] = true
+hierarchy_rel["influences"]["decreases"] = true
+hierarchy_rel["influences"]["increases"] = true
+hierarchy_rel["influences"]["metabolizes"] = true
+
+function equal_rel(target, prediction, hierarchy)
+   if hierarchy then
+      return target==prediction or (tab_rel[prediction]==target or tab_rel[target]==prediction)
+   else
+      return target==prediction
+   end
+end
+
+
+
 function test(network, data, params)
    
    local timer = torch.Timer()
@@ -89,8 +113,8 @@ function test(network, data, params)
 	       local class = data.relations:isrelated(idx, ent1, ent2)
 	       --if data.relationhash[class]=="int" then io.read() end
 	       precision_recall[class].totalpos = precision_recall[class].totalpos +1
-	       if class==indice then
-		  precision_recall[indice].truepos = precision_recall[indice].truepos+1
+	       if equal_rel(class, indice, params.hierarchy) then
+		  precision_recall[class].truepos = precision_recall[class].truepos+1
 	       else
 		  -- print("error")
 		  if false then
@@ -250,7 +274,22 @@ function test(network, data, params)
       print("Class " .. i .. ":\t" .. string.format('%.2f',precisions[i]) .. "\t" .. string.format('%.2f',recalls[i])) 
    end
 
-   print(confusion_matrix)
 
-   return (macro_P or 0), (macro_R or 0), (macro_f1score or 0), cost, micro_P, micro_R, micro_f1score      
+   local tab_return = {}
+   for k,i in pairs(class_to_consider) do
+      print(data.relationhash[i])
+      tab_return[ data.relationhash[i] ] = {precision = precisions[i], recall = recalls[i], f1 = (2*precisions[i]*recalls[i])/(precisions[i]+recalls[i]) }
+      tab_return[ data.relationhash[i] ].precision = tab_return[ data.relationhash[i] ].precision==tab_return[ data.relationhash[i] ].precision and tab_return[ data.relationhash[i] ].precision or 0
+      tab_return[ data.relationhash[i] ].recall = tab_return[ data.relationhash[i] ].recall==tab_return[ data.relationhash[i] ].recall and tab_return[ data.relationhash[i] ].recall or 0
+      tab_return[ data.relationhash[i] ].f1 = tab_return[ data.relationhash[i] ].f1==tab_return[ data.relationhash[i] ].f1 and tab_return[ data.relationhash[i] ].f1 or 0
+   end
+   tab_return["macro_avg"] = {precision=macro_P or 0, recall=macro_R or 0, f1=macro_f1score or 0}
+   tab_return["micro_avg"] = {precision=micro_P or 0, recall=micro_R or 0, f1=micro_f1score or 0}
+   tab_return.cost = cost
+
+   
+   print(tab_return)
+   
+   --return (macro_P or 0), (macro_R or 0), (macro_f1score or 0), cost, micro_P, micro_R, micro_f1score
+   return tab_return
 end

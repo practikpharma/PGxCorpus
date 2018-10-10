@@ -491,7 +491,6 @@ function test(networks, tagger, params, data, corpus)
       for j=1,#entities_gold do
 	 tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
       end
-
       
       if params.brat then
       	 local fwords = io.open("gold/" .. data.names[idx] .. ".txt", "w")

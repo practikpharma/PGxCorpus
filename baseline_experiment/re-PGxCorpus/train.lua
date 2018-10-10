@@ -56,7 +56,6 @@ cmd:option('-maxsize', math.huge, 'sentencesizemax')
 cmd:option('-notest', false, 'do not test')
 cmd:option('-debug', false, 'debug option for nngraph')
 cmd:option('-mobius', false, 'run on mobius')
-cmd:option('-parser', 'stanford', 'parser to use (stanford or McClosky)')
 cmd:option('-nosgd', false, 'no sgd')
 cmd:option('-time', false, 'time evaluation')
 cmd:option('-anon', false, 'anonymize drugs')
@@ -68,6 +67,7 @@ cmd:option('-wszs', '{3,3,5,5}', 'corpus to test on')
 cmd:option('-channels', 1, '')
 cmd:option('-brat', false, "produce gold and prediction files in brat format")
 cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=true,decreases=true,treats=true,causes=true,increases=true,metabolizes=true,transports=true}', 'Only considers the labels given in option')
+cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -197,10 +197,15 @@ if frestart then
    -- print("Valid_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
    -- print("Valid_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
    
-   local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
-   print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-   print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
-      --exit()
+   -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
+   -- print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
+   -- print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+   local tab = test(network, tdata, params)
+   print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
+   print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
+   
+
+   --exit()
    -- print(p)
    -- print(r)
    -- print(f1)
@@ -435,22 +440,36 @@ while true do
    local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
    local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
    
-   local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, data, params) --subtraindata
-   print("Train_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-   print("Train_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+   local tab = test(network, data, params) --subtraindata
+
+   print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
+   print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
    
-   f_macro_precision:write(macro_p .. "\n"); f_macro_precision:flush()
-   f_macro_recall:write(macro_r .. "\n"); f_macro_recall:flush()
-   f_macro_f1:write(macro_f1 .. "\n"); f_macro_f1:flush()
-   f_micro_precision:write(micro_p .. "\n"); f_micro_precision:flush()
-   f_micro_recall:write(micro_r .. "\n"); f_micro_recall:flush()
-   f_micro_f1:write(micro_f1 .. "\n"); f_micro_f1:flush()
-   fcost:write(c .. "\n"); fcost:flush()
+   f_macro_precision:write(tab.macro_avg.precision .. "\n"); f_macro_precision:flush()
+   f_macro_recall:write(tab.macro_avg.recall .. "\n"); f_macro_recall:flush()
+   f_macro_f1:write(tab.macro_avg.f1 .. "\n"); f_macro_f1:flush()
+   f_micro_precision:write(tab.micro_avg.precision .. "\n"); f_micro_precision:flush()
+   f_micro_recall:write(tab.micro_avg.recall .. "\n"); f_micro_recall:flush()
+   f_micro_f1:write(tab.micro_avg.f1 .. "\n"); f_micro_f1:flush()
+   fcost:write(tab.cost .. "\n"); fcost:flush()
    
    fcost:close()
    f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
    f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
    f1 = macro_f1
+
+   for i=2,#data.relationhash do
+      local f_precision = io.open(rundir .. "/" .. data.relationhash[i] .. "_precision_train", 'a')
+      local f_recall = io.open(rundir .. "/" .. data.relationhash[i] .. "_recall_train", 'a')
+      local f_f1 = io.open(rundir .. "/" .. data.relationhash[i] .. "_f1-score_train", 'a')
+
+      f_precision:write(tab[data.relationhash[i]].precision .. "\n")
+      f_recall:write(tab[data.relationhash[i]].recall .. "\n")
+      f_f1:write(tab[data.relationhash[i]].f1 .. "\n")
+      
+      f_precision:close(); f_recall:close(); f_f1:close()
+   end
+
    
    if not params.notest then
       
@@ -470,23 +489,37 @@ while true do
       local f_micro_recall = io.open(rundir .. "/micro_recall_valid", 'a')
       local f_micro_f1 = io.open(rundir .. "/micro_f1-score_valid", 'a')
       
-      local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, vdata, params)
-      print("Valid_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-      print("Valid_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+      local tab = test(network, vdata, params) --subtraindata
       
-      f_macro_precision:write(macro_p .. "\n"); f_macro_precision:flush()
-      f_macro_recall:write(macro_r .. "\n"); f_macro_recall:flush()
-      f_macro_f1:write(macro_f1 .. "\n"); f_macro_f1:flush()
-      f_micro_precision:write(micro_p .. "\n"); f_micro_precision:flush()
-      f_micro_recall:write(micro_r .. "\n"); f_micro_recall:flush()
-      f_micro_f1:write(micro_f1 .. "\n"); f_micro_f1:flush()
-      fcost:write(c .. "\n"); fcost:flush()
+      print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
+      print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
       
+      f_macro_precision:write(tab.macro_avg.precision .. "\n"); f_macro_precision:flush()
+      f_macro_recall:write(tab.macro_avg.recall .. "\n"); f_macro_recall:flush()
+      f_macro_f1:write(tab.macro_avg.f1 .. "\n"); f_macro_f1:flush()
+      f_micro_precision:write(tab.micro_avg.precision .. "\n"); f_micro_precision:flush()
+      f_micro_recall:write(tab.micro_avg.recall .. "\n"); f_micro_recall:flush()
+      f_micro_f1:write(tab.micro_avg.f1 .. "\n"); f_micro_f1:flush()
+      fcost:write(tab.cost .. "\n"); fcost:flush()
+   
       fcost:close()
       f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
       f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
-      f1 = macro_f1
 
+      for i=2,#data.relationhash do
+	 local f_precision = io.open(rundir .. "/" .. data.relationhash[i] .. "_precision_valid", 'a')
+	 local f_recall = io.open(rundir .. "/" .. data.relationhash[i] .. "_recall_valid", 'a')
+	 local f_f1 = io.open(rundir .. "/" .. data.relationhash[i] .. "_f1-score_valid", 'a')
+	 
+	 f_precision:write(tab[data.relationhash[i]].precision .. "\n")
+	 f_recall:write(tab[data.relationhash[i]].recall .. "\n")
+	 f_f1:write(tab[data.relationhash[i]].f1 .. "\n")
+	 
+	 f_precision:close(); f_recall:close(); f_f1:close()
+      end
+
+      
+      f1 = tab.macro_avg.f1
       if f1 > params.best then
 	 params.best = f1
 	 print('saving test: better than ever ' .. f1)
@@ -507,20 +540,34 @@ while true do
       local f_micro_recall = io.open(rundir .. "/micro_recall_test", 'a')
       local f_micro_f1 = io.open(rundir .. "/micro_f1-score_test", 'a')
       
-      local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
-      print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-      print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+      local tab = test(network, tdata, params) --subtraindata
       
-      f_macro_precision:write(macro_p .. "\n"); f_macro_precision:flush()
-      f_macro_recall:write(macro_r .. "\n"); f_macro_recall:flush()
-      f_macro_f1:write(macro_f1 .. "\n"); f_macro_f1:flush()
-      f_micro_precision:write(micro_p .. "\n"); f_micro_precision:flush()
-      f_micro_recall:write(micro_r .. "\n"); f_micro_recall:flush()
-      f_micro_f1:write(micro_f1 .. "\n"); f_micro_f1:flush()
-      fcost:write(c .. "\n"); fcost:flush()
+      print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
+      print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
+      
+      f_macro_precision:write(tab.macro_avg.precision .. "\n"); f_macro_precision:flush()
+      f_macro_recall:write(tab.macro_avg.recall .. "\n"); f_macro_recall:flush()
+      f_macro_f1:write(tab.macro_avg.f1 .. "\n"); f_macro_f1:flush()
+      f_micro_precision:write(tab.micro_avg.precision .. "\n"); f_micro_precision:flush()
+      f_micro_recall:write(tab.micro_avg.recall .. "\n"); f_micro_recall:flush()
+      f_micro_f1:write(tab.micro_avg.f1 .. "\n"); f_micro_f1:flush()
+      fcost:write(tab.cost .. "\n"); fcost:flush()
       
       fcost:close()
       f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
       f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
+
+      for i=2,#data.relationhash do
+	 local f_precision = io.open(rundir .. "/" .. data.relationhash[i] .. "_precision_test", 'a')
+	 local f_recall = io.open(rundir .. "/" .. data.relationhash[i] .. "_recall_test", 'a')
+	 local f_f1 = io.open(rundir .. "/" .. data.relationhash[i] .. "_f1-score_test", 'a')
+	 
+	 f_precision:write(tab[data.relationhash[i]].precision .. "\n")
+	 f_recall:write(tab[data.relationhash[i]].recall .. "\n")
+	 f_f1:write(tab[data.relationhash[i]].f1 .. "\n")
+	 
+	 f_precision:close(); f_recall:close(); f_f1:close()
+      end
+
    end
 end
