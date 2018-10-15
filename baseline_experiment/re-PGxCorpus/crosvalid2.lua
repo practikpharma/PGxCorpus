@@ -34,7 +34,7 @@ torch.manualSeed(os.time())
 local params = cmd:parse(arg)
 torch.setnumthreads(1)
 
-local cmd = "find " .. params.loaddir .. " -name model-best.bin"
+local cmd = "find " .. params.loaddir .. " -name model-best-valid.bin"
 local handle = io.popen (cmd, "r")
 print(cmd)
 
