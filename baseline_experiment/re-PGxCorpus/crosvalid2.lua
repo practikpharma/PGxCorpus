@@ -44,8 +44,8 @@ local tab_rel = {"isAssociatedWith", "isExplainedBy", "treats", "transports", "i
 
 
 local tab_res = {}
-for i=1,#tab_ent do
-   tab_res[ tab_ent[i] ] = {f1={}, precision={}, recall={}}
+for i=1,#tab_rel do
+   tab_res[ tab_rel[i] ] = {f1={}, precision={}, recall={}}
 end
 tab_res.macro = {f1={}, precision={}, recall={}}
 
