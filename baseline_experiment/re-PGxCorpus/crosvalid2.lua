@@ -71,7 +71,7 @@ while _file and nnetwork<params.maxnet do
    end
 
    
-   local network = createnetworks(paramsModel,datas)
+   local network = createnetworks(paramsModel,data)
    local net = f:readObject()
    network:loadnet(paramsModel, net)
    
