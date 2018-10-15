@@ -85,7 +85,9 @@ while _file and nnetwork<params.maxnet do
    print("tab")
    print(tab)
    for i=1,#tdata.relationhash do
-      local rel = tdata.relationhash[i] 
+      local rel = tdata.relationhash[i]
+      print(rel)
+      
       table.insert(tab_res[rel].f1, tab[rel].f1==tab[rel].f1 and tab[rel].f1 or 0)
       table.insert(tab_res[rel].precision, tab[rel].precision==tab[rel].precision and tab[rel].precision or 0)
       table.insert(tab_res[rel].recall, tab[rel].recall==tab[rel].recall and tab[rel].recall or 0)
