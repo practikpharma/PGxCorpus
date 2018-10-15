@@ -80,10 +80,10 @@ while _file and nnetwork<params.maxnet do
 
    print("================")
    print("tab_res")
-   print(tab_res)
+   print(tab_res.decreases)
    local tab = test(network, tdata, paramsModel)
    print("tab")
-   print(tab)
+   print(tab.decreases)
    for i=2,#tdata.relationhash do
       local rel = tdata.relationhash[i]
       print(rel)
