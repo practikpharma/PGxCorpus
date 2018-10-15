@@ -28,6 +28,7 @@ cmd:option('-optnet', '', 'select networks with a given option')
 cmd:option('-bestvalid', false, '')
 cmd:text()
 
+torch.setdefaulttensortype('torch.FloatTensor')
 math.randomseed(os.time())
 torch.manualSeed(os.time())
 
