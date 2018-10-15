@@ -836,7 +836,7 @@ function createdata(params)
    local starts, ends = loadstartend(pathdata, nil, params.maxload)
 
    local names = loadnames(pathdata, params.maxload)
-   print(names)
+   --print(names)
    
    local entities = loadentities(pathdata, ".ann",  params)
    load_entity_indices(entities, words, starts, ends, wordhash)
