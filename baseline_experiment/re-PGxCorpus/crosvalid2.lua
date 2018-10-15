@@ -78,6 +78,7 @@ while _file and nnetwork<params.maxnet do
    
    paramsModel.rundir = params.loaddir .. paramsModel.rundir:match("/([^/]+)$")
 
+   print(tab_res)
    local tab = test(network, tdata, paramsModel)
    for i=1,#tdata.relationhash do
       local rel = tdata.relationhash[i] 
