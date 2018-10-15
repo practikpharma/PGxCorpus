@@ -288,7 +288,6 @@ function test(network, data, params)
    tab_return.cost = cost
 
    
-   print(tab_return)
    
    --return (macro_P or 0), (macro_R or 0), (macro_f1score or 0), cost, micro_P, micro_R, micro_f1score
    return tab_return
