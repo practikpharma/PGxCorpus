@@ -78,7 +78,7 @@ while _file and nnetwork<params.maxnet do
    
    paramsModel.rundir = params.loaddir .. paramsModel.rundir:match("/([^/]+)$")
 
-   local tab = test(network, tdata, params)
+   local tab = test(network, tdata, paramsModel)
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
    print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
 
