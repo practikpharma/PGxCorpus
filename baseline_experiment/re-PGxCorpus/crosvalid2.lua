@@ -79,8 +79,16 @@ while _file and nnetwork<params.maxnet do
    paramsModel.rundir = params.loaddir .. paramsModel.rundir:match("/([^/]+)$")
 
    local tab = test(network, tdata, paramsModel)
-   print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
-   print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
+   for i=1,#tdata.relationhash do
+      local rel = tdata.relationhash[i] 
+      table.insert(tab_res[rel].f1, tab[rel].f1==tab[rel].f1 and tab[rel].f1 or 0)
+      table.insert(tab_res[rel].precision, tab[rel].precision==tab[rel].precision and tab[rel].precision or 0)
+      table.insert(tab_res[rel].recall, tab[rel].recall==tab[rel].recall and tab[rel].recall or 0)
+   end
+   table.insert(tab_res.macro.recall, tab.macro_avg.recall)
+   table.insert(tab_res.macro.precision, tab.macro_avg.precision)
+   table.insert(tab_res.macro.f1, tab.macro_avg.f1)
+  
 
 
    
