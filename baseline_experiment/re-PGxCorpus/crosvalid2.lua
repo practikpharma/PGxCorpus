@@ -80,6 +80,7 @@ while _file and nnetwork<params.maxnet do
 
    print(tab_res)
    local tab = test(network, tdata, paramsModel)
+   print(tab)
    for i=1,#tdata.relationhash do
       local rel = tdata.relationhash[i] 
       table.insert(tab_res[rel].f1, tab[rel].f1==tab[rel].f1 and tab[rel].f1 or 0)
