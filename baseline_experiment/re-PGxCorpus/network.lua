@@ -137,7 +137,7 @@ function createnetworks(params, data)
 	 exit()
       end
 
-      print(f)
+      print(f:readFloat(#lmhash * params.wfsz))
       
       local lmrepr = torch.Tensor(f:readFloat(#lmhash * params.wfsz), 1, #lmhash, -1, params.wfsz, -1)
       --local lmrepr = torch.Tensor(f:readObject(), 1, #lmhash, -1, params.wfsz, -1)
