@@ -204,7 +204,7 @@ if frestart then
    local tab = test(network, tdata, params)
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
    print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
-   
+   print(tab.decreases)
 
    --exit()
    -- print(p)
