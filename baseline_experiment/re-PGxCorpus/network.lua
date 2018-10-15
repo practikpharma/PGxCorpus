@@ -189,30 +189,30 @@ function createnetworks(params, data)
    local fsz = params.wfsz + params.efsz + params.tfsz + params.pfsz + (2*params.rdfsz)
    local dropout = {}
    for i=1,#params.wszs do
+      if params.tfsz>0 then
+	 assert(data.wordhash["PADDING"]==data.entityhash["PADDING"])
+      end
       local pad = (params.wszs[i]-1)/2
       wszs[i] = nn.Sequential()
       local padding = nn.MapTable()
       local p = nn.Sequential()
-      p:add(nn.Padding(1,-pad,1,1))
-      p:add(nn.Padding(1,pad,1,1))
+      p:add(nn.Padding(1,-pad,1,data.wordhash["PADDING"]))
+      p:add(nn.Padding(1,pad,1,data.wordhash["PADDING"]))
       padding:add(p)
       wszs[i]:add(padding)
+      
 
-      if false then
-	 exit()
-	 wszs[i]:add( get_par(params, lkts, dropout) )
-	 wszs[i]:add(nn.JoinTable(2))
-      else
-	 local channels = nn.ConcatTable()
-	 channels:add( nn.Sequential():add( get_par(params, lkts, dropout)):add(nn.JoinTable(2))  )
-	 if params.channels<1 then
-	    channels:add( nn.Sequential():add( get_par(params, lkts, dropout, true)):add(nn.JoinTable(2))  )
-	 end
-	 wszs[i]:add(channels)
-	 wszs[i]:add( nn.CAddTable() )
+      local channels = nn.ConcatTable()
+      channels:add( nn.Sequential():add( get_par(params, lkts, dropout)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
+      if params.channels>1 then
+	 channels:add( nn.Sequential():add( get_par(params, lkts, dropout, true)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
       end
-
-      wszs[i]:add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i]) )
+      if params.channels>2 then error("not implemented") end
+      wszs[i]:add(channels)
+      wszs[i]:add( nn.CAddTable() )
+      
+      
+      --wszs[i]:add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i]) )
       wszs[i]:add( nn.HardTanh() )--non linearity
       wszs[i]:add( nn.Max(1) )
       net:add(wszs[i])

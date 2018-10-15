@@ -30,6 +30,7 @@ cmd:text('Chunk-based phrase prediction')
 cmd:text()
 cmd:text()
 cmd:text('Misc options:')
+
 cmd:option('-data', 'data/PGxCorpus', 'data directory')
 cmd:option('-validp', 10, 'training corpus proportion for the validation')
 cmd:option('-valids', 1, 'sector extracted from training for the validation')
@@ -58,7 +59,6 @@ cmd:option('-debug', false, 'debug option for nngraph')
 cmd:option('-mobius', false, 'run on mobius')
 cmd:option('-nosgd', false, 'no sgd')
 cmd:option('-time', false, 'time evaluation')
-cmd:option('-anon', false, 'anonymize drugs')
 cmd:option('-debug2', false, 'debug2')
 cmd:option('-maxent', 1000, 'max entities in training sentence')
 cmd:option('-restartparams', '{}', 'max entities in training sentence')
@@ -68,6 +68,7 @@ cmd:option('-channels', 1, '')
 cmd:option('-brat', false, "produce gold and prediction files in brat format")
 cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=true,decreases=true,treats=true,causes=true,increases=true,metabolizes=true,transports=true}', 'Only considers the labels given in option')
 cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
+cmd:option('-anonymize', false, "anonymize entities")
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -209,7 +210,7 @@ if frestart then
    -- print(p)
    -- print(r)
    -- print(f1)
-   exit()
+   --exit()
 end
 --print(network.lookup)
 --print(network.lookup2)
@@ -331,12 +332,44 @@ while true do
 		     pcall(function() network:forward(input) end)
 		     os.execute('echo my_bad_linear_net.svg')
 		  end
+
 		  
 		  if params.time then timer2:reset() end
-		  
+
+		  --print(network.network)
+		
 		  local output
 		  output = network:forward(input)
 		  if params.time then timeforward = timeforward + timer2:time().real end
+
+		  -- printw(words, data.wordhash)
+		  -- print(network.network)
+		  -- io.read()
+
+		  -- print("network.network:get(1):get(1):get(3)")
+		  -- print(network.network:get(1):get(1):get(2).output)
+		  -- print(network.network:get(1):get(1):get(3).output:size())
+		  -- print(network.network:get(1):get(1):get(5).output:size())
+		  -- print(network.network:get(1).output)
+		  -- print(network.network:get(2).output:size())
+
+		  -- print("")
+		  -- io.read()
+
+		  -- io.read()
+		  
+		  -- print("network.network:get(1):get(1):get(2).input")
+		  -- print(network.network:get(1):get(1):get(2).output)
+		  -- print(network.network:get(1):get(1):get(2))
+
+
+		  -- print("network.network:get(1):get(1):get(2):get(1).input")
+		  -- print(network.network:get(1):get(1):get(2):get(1).output)
+		  -- print(network.network:get(1):get(1):get(2):get(1))
+
+		  -- print("toto")
+		  -- io.read()
+
 		  
 		  local target = data.relations:isrelated(idx, ent1, ent2)
 		  --printw(input[1], data.wordhash)

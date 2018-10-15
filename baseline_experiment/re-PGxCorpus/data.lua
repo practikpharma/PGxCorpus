@@ -1,5 +1,53 @@
 require 'torch'
 
+function anonymize(words, entities)
+   for i=1,#words.idx do
+      --print(words[1])
+      local _ws = {}
+      for w=1,words[i]:size(1) do
+	 table.insert(_ws, words[i][w])
+      end
+      print(_ws)
+      --print(entities[1])
+
+      for e=1,#entities[i] do
+	 print(entities[i][e])
+	 local e_w = entities[i][e][5] --words composing the entity
+
+	 print(e_w)
+	 --replacing consecutive entitiy words by the special token "entity"
+	 while e_w[1] do
+	    --getting groups of consecutive entity words
+	    local group_e = {}
+	    local current_e = table.remove(e_w,1) 
+	    table.insert(group_e, current_e)
+	    while e_w[1]==current_e+1 do
+	       current_e = table.remove(e_w,1)
+	       table.insert(group_e, current_e)
+	    end
+	    print(group_e)
+	    print(_ws)
+	    for i=1,#group_e do
+	       table.remove(_ws, group_e[1])
+	    end
+	    table.insert(_ws, group_e[1], 666666)
+	    print(_ws)
+	    --updating indices for all the other entities
+	    for k=1,e_w do
+	       if e_w[k]>group_e[1] then
+		  
+	       end
+	    end
+	    
+	    io.read()
+	 end
+
+      end
+      
+      io.read()
+   end
+end
+
 local function loadnames(pathdata, maxload)
    print("loading names in " .. pathdata)
    local indices = {}
@@ -104,8 +152,9 @@ function _load_entity_indices(ents, starts, ends)
 	    table.insert(idx, i)
 	 end
       end
-      
-      ents[j][5] = torch.Tensor(idx)
+
+      table.sort(idx, function(a,b) return a<b end)
+      ents[j][5] = idx
       --print(ents[j])
       --io.read()
    end
@@ -474,8 +523,8 @@ local function loadentities(pathdata, extention, params)
       --print(data.entities[nsent])
       local ent1 = data.entities[nsent][e1][5]
       local ent2 = data.entities[nsent][e2][5]
-      for i=1,ent1:size(1) do res[ ent1[i] + pad ]=3 end--entity1
-      for i=1,ent2:size(1) do res[ ent2[i] + pad ]=4 end--entity2
+      for i=1,#ent1 do res[ ent1[i] + pad ]=3 end--entity1
+      for i=1,#ent2 do res[ ent2[i] + pad ]=4 end--entity2
       return res
    end
    
@@ -781,7 +830,8 @@ function createdata(params)
    local pathdata = params.data
    
    local words = loadwords(pathdata, wordhash, params.addraw, wordfeature, params.maxload)
-   pad(words, (params.wsz-1)/2, wordhash.PADDING)
+   --pad(words, (params.wsz-1)/2, wordhash.PADDING)
+   pad(words, 0, wordhash.PADDING)
    
    local starts, ends = loadstartend(pathdata, nil, params.maxload)
 
@@ -790,8 +840,12 @@ function createdata(params)
    
    local entities = loadentities(pathdata, ".ann",  params)
    load_entity_indices(entities, words, starts, ends, wordhash)
+
+   if params.anonymize then anonymize(words, entities) end
    
    loaddag(entities)
+
+   
    
    local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash, params, entities)
 
