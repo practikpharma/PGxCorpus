@@ -539,8 +539,8 @@ local function loadentities(pathdata, extention, params)
       local _type2 = data.entities[nsent][e2][2]
       local ent1 = data.entities[nsent][e1][5]
       local ent2 = data.entities[nsent][e2][5]
-      for i=1,ent1:size(1) do res2[ ent1[i] + pad ] = data.entityhash[_type1] end--entity1
-      for i=1,ent2:size(1) do res2[ ent2[i] + pad ] = data.entityhash[_type2] end--entity2
+      for i=1,#ent1 do res2[ ent1[i] + pad ] = data.entityhash[_type1] end--entity1
+      for i=1,#ent2 do res2[ ent2[i] + pad ] = data.entityhash[_type2] end--entity2
       return res2
    end
 
