@@ -9,10 +9,10 @@ end
 
 require("torch")
 require("nn")
-require("data2")
+require("data")
 require("network")
 require("nngraph")
-require("test2")
+require("test")
 
 cmd = torch.CmdLine()
 
