@@ -85,13 +85,11 @@ while _file and nnetwork<params.maxnet do
    local tab = test(network, tdata, paramsModel)
    print("tab")
    print(tab.decreases)
-   for i=2,#tdata.relationhash do
-      local rel = tdata.relationhash[i]
-      print(rel)
-      
-      table.insert(tab_res[rel].f1, tab[rel].f1==tab[rel].f1 and tab[rel].f1 or 0)
-      table.insert(tab_res[rel].precision, tab[rel].precision==tab[rel].precision and tab[rel].precision or 0)
-      table.insert(tab_res[rel].recall, tab[rel].recall==tab[rel].recall and tab[rel].recall or 0)
+   --for i=2,#tdata.relationhash do
+   for r, _ in pairs(paramsModel.onlylabel) do
+      table.insert(tab_res[r].f1, tab[r].f1==tab[r].f1 and tab[r].f1 or 0)
+      table.insert(tab_res[r].precision, tab[r].precision==tab[r].precision and tab[r].precision or 0)
+      table.insert(tab_res[r].recall, tab[r].recall==tab[r].recall and tab[r].recall or 0)
    end
    table.insert(tab_res.macro.recall, tab.macro_avg.recall)
    table.insert(tab_res.macro.precision, tab.macro_avg.precision)
