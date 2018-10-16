@@ -730,8 +730,6 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
    return relations
 end
 
-
-
 local wordhash, entityhash, deptypehash, poshash, relationhash, entityhash2
 
 function loadhash(params)
@@ -741,6 +739,13 @@ function loadhash(params)
    wordhash = wordhash or _loadhash('data/hash/word.txt', params.nword)
    entityhash = entityhash or _loadhash('data/hash/entities.txt')
    relationhash = relationhash or _loadhash("data/hash/relations.txt")
+   if params.notype then
+      for i=3,#relationhash do
+	 if relationhash[i]~="isEquivalentTo" then
+	    relationhash[ relationhash[i] ] = 2
+	 end
+      end
+   end
    entityhash2 = {"PADDING", "O", "Entity1", "Entity2", PADDING=1, O=2, Entity1=3, Entity2=4} --for entity position
    
 end
