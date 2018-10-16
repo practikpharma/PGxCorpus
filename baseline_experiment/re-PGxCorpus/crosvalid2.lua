@@ -81,10 +81,10 @@ while _file and nnetwork<params.maxnet do
 
    print("================")
    print("tab_res")
-   print(tab_res.decreases)
+   print(tab_res.isAssociatedWith)
    local tab = test(network, tdata, paramsModel)
    print("tab")
-   print(tab.decreases)
+   print(tab.isAssociatedWith)
    --for i=2,#tdata.relationhash do
    for r, _ in pairs(paramsModel.onlylabel) do
       table.insert(tab_res[r].f1, tab[r].f1==tab[r].f1 and tab[r].f1 or 0)
@@ -95,10 +95,6 @@ while _file and nnetwork<params.maxnet do
    table.insert(tab_res.macro.precision, tab.macro_avg.precision)
    table.insert(tab_res.macro.f1, tab.macro_avg.f1)
   
-
-
-   
-   
    _file = handle:read()
 end
 
