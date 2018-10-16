@@ -190,7 +190,7 @@ function createnetworks(params, data)
    local dropout = {}
    for i=1,#params.wszs do
       if params.tfsz>0 then
-	 assert(data.wordhash["PADDING"]==data.entityhash["PADDING"])
+	 assert(data.wordhash["PADDING"]==data.entityhash["PADDING"] and data.entityhash["PADDING"]==data.entityhash2["PADDING"])
       end
       local pad = (params.wszs[i]-1)/2
       wszs[i] = nn.Sequential()

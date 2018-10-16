@@ -39,8 +39,6 @@ cmd:option('-efsz', 10, 'entity feature size (for the 2 candidate entities)')
 cmd:option('-tfsz', 0, 'entity tag features size')
 cmd:option('-pfsz', 0, 'pos tag features size')
 cmd:option('-rdfsz', 0, 'relative distance features size')
-cmd:option('-wsz', 1, 'window size')
-cmd:option('-wsz2', 1, 'window size for rnn-cnn')
 cmd:option("-nword", 20000, "dictionary size")
 cmd:option("-nhu", '{200}', "hidden units")
 cmd:option('-seed', 1111, 'seed')
@@ -265,7 +263,9 @@ while true do
       nforward = nforward + 1
       local idx = params.nosgd and dataidx[i][1] or dataidx[ perm[i] ][1] 
       local ent_pair_idx = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
+
       
+      --print(i)
       --print(" sentence " .. idx .. " size " .. " nb entities " .. data.entities.nent(data, idx) .. " entity couple " .. ent_pair_idx)
       --printw(datas[datacorpus].words[idx], datas[datacorpus].wordhash)
       
@@ -304,15 +304,28 @@ while true do
 	       --this is not the pair of entities considered (see dataidx[ perm[i] ])
 	       --print("do not forward relation between " .. ent1 .. " and " .. ent2 .. " " .. idx) else print("do forward")
 	    else
-	       if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) then
-		  --These entities are nested and thus not related
+	       if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) or overlapp(data.entities[idx][ent1][5], data.entities[idx][ent2][5]) then
+		  if data.relations:isrelated(idx, ent1, ent2)~=data.relationhash.null then
+		     print(data.entities[idx][ent1][3])
+		     print(data.entities[idx][ent2][3])
+		     print(ent1, ent2)
+		     printw(data.words[idx], data.wordhash)
+		     error("")
+		  end
+		  if (not is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1])) and (not is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1])) then
+		     -- printw(data.words[idx], data.wordhash)
+		     -- print(data.entities[idx][ent1])
+		     -- print(data.entities[idx][ent2])
+		     -- print("overlapp"); io.read()
+		  end
+		  --These entities are nested or overlapp and thus are not related
 		  -- print(data.entities[idx][ent1])
 		  -- print(data.entities[idx][ent2])
 		  -- exit()
 	       else
 		  --print(ent1, ent2)
 		  --print(nf .. " sentence " .. idx .. " relation between " .. ent1 .. " and " .. ent2 .. " (" .. data.relations:isrelated(idx, ent1, ent2) .. ")")
-		  local entities = data.entities.getent(data, idx, ent1, ent2)
+		  local entities = data.entities.getent(data, idx, ent1, ent2, data)
 		  if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn")  then entities = entities:view(1, entities:size(1)) end
 		  
 		  local input = {words}
@@ -337,7 +350,14 @@ while true do
 		  if params.time then timer2:reset() end
 
 		  --print(network.network)
-		
+		  --print(input)
+		  if params.anonymize then
+		     input = anonymize(words, data.entities[idx], ent1, ent2, data, params)
+		  end
+		  --print(input)
+		  --print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		  --io.read()
+		  
 		  local output
 		  output = network:forward(input)
 		  if params.time then timeforward = timeforward + timer2:time().real end

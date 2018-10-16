@@ -80,11 +80,18 @@ function test(network, data, params)
       
       for ent1=1,data.entities.nent(data,idx) do
 	 for ent2=ent1+1,data.entities.nent(data,idx) do
-	    if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) then
-	       --These entities are nested and thus not related
+	    if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) or overlapp(data.entities[idx][ent1][5], data.entities[idx][ent2][5]) then
+	       if data.relations:isrelated(idx, ent1, ent2)~=data.relationhash.null then
+		  print(data.entities[idx][ent1][3])
+		  print(data.entities[idx][ent2][3])
+		  print(ent1, ent2)
+		  printw(data.words[idx], data.wordhash)
+		  error("")
+	       end
+	       --These entities are nested or overlapp and thus are not related
 	    else
 	       --print("relation between " .. ent1 .. " and " .. ent2 .. " (" .. data.relations:isrelated(idx, ent1, ent2) .. ")")
-	       local entities = data.entities.getent(data, idx, ent1, ent2)
+	       local entities = data.entities.getent(data, idx, ent1, ent2, data)
 	       if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn") then entities = entities:view(1, entities:size(1)) end
 	       
 	       local input = {words}
@@ -95,6 +102,11 @@ function test(network, data, params)
 		  table.insert(input, data.get_relative_distance(entities, 2))
 	       end
 	       table.insert(input, entities)
+
+	       if params.anonymize then
+		  input = anonymize(words, data.entities[idx], ent1, ent2, data, params)
+	       end
+
 	       
 	       local output
 	       output = network:forward(input)

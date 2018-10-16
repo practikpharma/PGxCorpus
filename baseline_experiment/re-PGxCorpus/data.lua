@@ -1,51 +1,162 @@
 require 'torch'
 
-function anonymize(words, entities)
-   for i=1,#words.idx do
-      --print(words[1])
-      local _ws = {}
-      for w=1,words[i]:size(1) do
-	 table.insert(_ws, words[i][w])
-      end
-      print(_ws)
-      --print(entities[1])
-
-      for e=1,#entities[i] do
-	 print(entities[i][e])
-	 local e_w = entities[i][e][5] --words composing the entity
-
-	 print(e_w)
-	 --replacing consecutive entitiy words by the special token "entity"
-	 while e_w[1] do
-	    --getting groups of consecutive entity words
-	    local group_e = {}
-	    local current_e = table.remove(e_w,1) 
-	    table.insert(group_e, current_e)
-	    while e_w[1]==current_e+1 do
-	       current_e = table.remove(e_w,1)
-	       table.insert(group_e, current_e)
-	    end
-	    print(group_e)
-	    print(_ws)
-	    for i=1,#group_e do
-	       table.remove(_ws, group_e[1])
-	    end
-	    table.insert(_ws, group_e[1], 666666)
-	    print(_ws)
-	    --updating indices for all the other entities
-	    for k=1,e_w do
-	       if e_w[k]>group_e[1] then
-		  
-	       end
-	    end
-	    
-	    io.read()
-	 end
-
-      end
-      
-      io.read()
+function copy_tab(tab)
+   local res = {}
+   for i=1,#tab do
+      table.insert(res, tab[i]) 
    end
+   return res
+end
+
+local anon_res = torch.FloatTensor()
+function anon_getent(words, entities, e1, e2, data)
+   anon_res:resize(words:size(1)):fill( data.entityhash2.O)
+   --printw(data.words[nsent], data.wordhash)
+   --print(nsent)
+   --print(data.words[nsent])
+   --print(data.entities[nsent])
+   local ent1 = entities[e1][6]
+   local ent2 = entities[e2][6]
+   --print(ent1)
+   --print(ent2)
+   for i=1,#ent1 do anon_res[ ent1[i] ]=data.entityhash2.Entity1 end
+   for i=1,#ent2 do anon_res[ ent2[i] ]=data.entityhash2.Entity2 end
+   return anon_res
+end
+
+local anon_res2 = torch.FloatTensor()
+function anon_getenttags(data, words, entities, e1, e2)
+   anon_res2:resize(words:size(1)):fill(data.entityhash["O"])--create input tensor
+   local _type1 = entities[e1][2]
+   local _type2 = entities[e2][2]
+   local ent1 = entities[e1][6]
+   local ent2 = entities[e2][6]
+   for i=1,#ent1 do anon_res2[ ent1[i] ] = data.entityhash[_type1] end--entity1
+   for i=1,#ent2 do anon_res2[ ent2[i] ] = data.entityhash[_type2] end--entity2
+   return anon_res2
+end
+
+
+function anonymize(words, entities, ent1, ent2, data, params)
+   --printw(words, data.wordhash)
+   --print(entities[ent1])
+   --print(entities[ent2])
+   
+   --first entity in first
+   if entities[ent1][5][1]>entities[ent2][5][1] then
+      local back = ent1
+      ent1 = ent2
+      ent2 = back
+   end
+   
+   local _ws = {}
+   for w=1,words:size(1) do
+      table.insert(_ws, words[w])
+   end
+   --print(entities[1])
+   
+   entities[ent1][6] = copy_tab(entities[ent1][5])
+   entities[ent2][6] = copy_tab(entities[ent2][5])
+
+   --print("==================")
+   --print(entities[ent1][4])
+   --print(entities[ent2][4])
+   --print(entities[ent1][6])
+   --print(entities[ent2][6])
+   
+   
+   --replacing ent1 with special token "entity"
+   local new_ent = {}
+   while entities[ent1][6][1] do
+      --getting groups of consecutive entity words
+      local group_e = {}
+      local current_e = table.remove(entities[ent1][6],1) 
+      table.insert(group_e, current_e)
+      while entities[ent1][6][1]==current_e+1 do
+	 current_e = table.remove(entities[ent1][6],1)
+	 table.insert(group_e, current_e)
+      end
+      --print("group")
+      --print(group_e)
+      table.insert(new_ent, group_e[1])
+      --printw(torch.Tensor(_ws), data.wordhash)
+      for i=1,#group_e do
+	 table.remove(_ws, group_e[1])
+      end
+      table.insert(_ws, group_e[1], 4)
+      --printw(torch.Tensor(_ws), data.wordhash)
+      --updating word indices for all the other words of the entities
+      for k=1,#entities[ent1][6] do
+	 if entities[ent1][6][k]>group_e[1] then
+	    entities[ent1][6][k] = entities[ent1][6][k]-#group_e+1
+	 end
+      end
+      --updating word indices for the other entity
+      for k=1,#entities[ent2][6] do
+	 if entities[ent2][6][k]>group_e[1] then
+	    entities[ent2][6][k] = entities[ent2][6][k]-#group_e+1
+	 end
+      end
+   end
+   entities[ent1][6] = new_ent
+   -- io.read()
+   
+   -- print(entities[ent1][6])
+   -- print(entities[ent2][6])
+   
+   --replacing ent2 with special token "entity"
+   --print(entities[ent2][6])
+   local new_ent = {}
+   while entities[ent2][6][1] do
+      --getting groups of consecutive entity words
+      local group_e = {}
+      local current_e = table.remove(entities[ent2][6],1) 
+      table.insert(group_e, current_e)
+      while entities[ent2][6][1]==current_e+1 do
+	 current_e = table.remove(entities[ent2][6],1)
+	 table.insert(group_e, current_e)
+      end
+      --print(group_e)
+      table.insert(new_ent, group_e[1])
+      --printw(torch.Tensor(_ws), data.wordhash)
+      for i=1,#group_e do
+	 table.remove(_ws, group_e[1])
+      end
+      table.insert(_ws, group_e[1], 5)
+      --printw(torch.Tensor(_ws), data.wordhash)
+      --updating word indices for all the other words of the entities
+      for k=1,#entities[ent2][6] do
+	 if entities[ent2][6][k]>group_e[1] then
+	    entities[ent2][6][k] = entities[ent2][6][k]-#group_e+1
+	 end
+      end
+      --updating word indices for the other entity
+      for k=1,#entities[ent1][6] do
+	 if entities[ent1][6][k]>group_e[1] then
+	    entities[ent1][6][k] = entities[ent1][6][k]-#group_e+1
+	 end
+      end
+   end
+   entities[ent2][6] = new_ent
+   --io.read()
+
+   --print(_ws)
+   local new_words = torch.Tensor(_ws)
+   
+   local ents1 = anon_getent(new_words, entities, ent1, ent2, data)
+   --printw(ents1, data.entityhash2)
+
+   local ents2 = anon_getenttags(data, new_words, entities, ent1, ent2)
+   --printw(ents2, data.entityhash)
+   --io.read()
+
+   local new_input = {new_words}
+   if params.tfsz>0 then
+      table.insert(new_input, ents2)
+   end
+   table.insert(new_input, ents1)
+   return new_input
+   
 end
 
 local function loadnames(pathdata, maxload)
@@ -239,6 +350,17 @@ function getdag(ent)
 	 
       end
    end
+end
+
+--return true if ent1 overlapp with ent2
+--ent1 and ent2 must be list of word indices
+function overlapp(ent1, ent2)
+   for i=1,#ent1 do
+      for j=1,#ent2 do
+	 if ent1[i]==ent2[j] then return true end
+      end
+   end
+   return false
 end
 
 --return true if ent1 in included in ent2
@@ -509,38 +631,29 @@ local function loadentities(pathdata, extention, params)
    end
 
 
-   local pad = (params.wsz-1)/2
    local res = torch.Tensor()
-   entities.getent = function(data, nsent, e1, e2)
-      res:resize(data.words[nsent]:size(1)):fill(2)--2=Other
-      for i=1,pad do
-	 res[i]=1 --1=Padding
-	 res[res:size(1)-i+1] = 1 --1=Padding
-      end
+   entities.getent = function(data, nsent, e1, e2, data)
+      res:resize(data.words[nsent]:size(1)):fill( data.entityhash2.O )
       --printw(data.words[nsent], data.wordhash)
       --print(nsent)
       --print(data.words[nsent])
       --print(data.entities[nsent])
       local ent1 = data.entities[nsent][e1][5]
       local ent2 = data.entities[nsent][e2][5]
-      for i=1,#ent1 do res[ ent1[i] + pad ]=3 end--entity1
-      for i=1,#ent2 do res[ ent2[i] + pad ]=4 end--entity2
+      for i=1,#ent1 do res[ ent1[i] ]= data.entityhash2.Entity1 end
+      for i=1,#ent2 do res[ ent2[i] ]=data.entityhash2.Entity2 end
       return res
    end
    
    local res2 = torch.Tensor()
    entities.getenttags = function(data, nsent, e1, e2)
       res2:resize(data.words[nsent]:size(1)):fill(data.entityhash["O"])--create input tensor
-      for i=1,pad do
-	 res2[i]=data.entityhash["PADDING"] --1=Padding
-	 res2[res2:size(1)-i+1] = data.entityhash["PADDING"] --1=Padding
-      end
       local _type1 = data.entities[nsent][e1][2]
       local _type2 = data.entities[nsent][e2][2]
       local ent1 = data.entities[nsent][e1][5]
       local ent2 = data.entities[nsent][e2][5]
-      for i=1,#ent1 do res2[ ent1[i] + pad ] = data.entityhash[_type1] end--entity1
-      for i=1,#ent2 do res2[ ent2[i] + pad ] = data.entityhash[_type2] end--entity2
+      for i=1,#ent1 do res2[ ent1[i] ] = data.entityhash[_type1] end--entity1
+      for i=1,#ent2 do res2[ ent2[i] ] = data.entityhash[_type2] end--entity2
       return res2
    end
 
@@ -558,200 +671,6 @@ local function loadentities(pathdata, extention, params)
    return entities
 end
 
-local function loadentities_back(filename, sents, words, hash, maxload, wsz)
-   print(string.format('loading <%s>', filename))
-   
-   local entities = {}
-   local count=0
-   --local countprint = 267
-   for line in io.lines(filename) do
-      --print(count .. " " .. line)
-      count = count + 1
-      entities[count] = {}
-      --print(#entities+1)
-      --print(sents[#entities+1])
-      --print(line)
-      if line~="" then
-	 if countprint and count==countprint then print(line); print(sents[count]); io.read() end
-	 if maxload and maxload > 0 and #entities>maxload  then
-	    print("break entities")
-	    break
-	 else
-	    entities[count] = {}
-	    for entity in line:gmatch("[^ %d]+ [%d ]+") do
-	       --load boundaries
-	       local _type = entity:match("([^ ]+)")
-	       local bounds = {}
-	       --print(_type)
-	       for bound in entity:gmatch("%d+ %d+") do
-		  local i1 = bound:match("(%d+) %d+")
-		  local i2 = bound:match("%d+ (%d+)")
-		  i1 = tonumber(i1)
-		  i2 = tonumber(i2)
-		  --print(i1)
-		  --print(i2)
-		  table.insert(bounds, {i1,i2})
-	       end
-	       --print(bounds)
-	       --print(sents[count])
-
-	       if countprint and count==countprint then print(bounds); io.read()end
-
-	       --get the corresponding words
-	       local words = {}
-	       local enti=1
-	       local id = 0
-	       local idw = 1
-	       local boolent = false
-	       if id>=bounds[enti][1] then --sentence start with a drug
-		  table.insert(words, idw)
-		  boolent = true
-		  --print(idw)
-	       end
-	       --print(#sents)
-	       for i=1,#sents[count] do
-		  if countprint and count==countprint then print(sents[count]:sub(i,i) .. " " .. i .. " " .. id) end
-		  if sents[count]:sub(i,i)~=" " then
-		     --if countprint and count==countprint then print("hop") end
-		     if id>=bounds[enti][2] then
-			if countprint and count==countprint then print("end") end
-			boolent = false
-			enti=enti+1
-			if not bounds[enti] then break end --entity entirely found
-		     end
-		     id = id + 1 
-		  else
-		     idw = idw + 1
-		     if boolent==false and id>bounds[enti][1] then--start entity when it start in the middle of a word (the cutted entity is included)
-			if countprint and count==countprint then print("anomaly") end
-			table.insert(words, idw-1)--print(idw);
-			boolent=true
-		     end
-		     if id==bounds[enti][1] then
-			if countprint and count==countprint then print("start") end
-			--table.insert(words, idw)--print(idw);
-			boolent=true
-		     end
-		     if boolent then table.insert(words, idw) end--print(idw) end
-		     --print("====" .. id .. " " .. bounds[enti][2])
-		  end
-	       end
-	       if countprint and count==countprint then print("="); print(words);print("="); io.read() end
-	       --if #words==0 then io.read() end
-	       table.insert(entities[count], {_type, torch.IntTensor(words)})
-	       --print(words)
-	       --if #bounds>1 then io.read() end
-	       --table.insert(entities[count], {_type, bounds})
-	    end
-	 end
-      end
-      --print(entities[count])
-   end
-   
-   local pad = (wsz-1)/2
-   local res = torch.Tensor()
-   entities.getent = function(data, nsent, e1, e2)
-      res:resize(data.words[nsent]:size(1)):fill(2)--2=Other
-      for i=1,pad do
-	 res[i]=1 --1=Padding
-	 res[res:size(1)-pad+1] = 1 --1=Padding
-      end
-      --printw(data.words[nsent], data.wordhash)
-      --print(nsent)
-      --print(data.words[nsent])
-      --print(data.entities[nsent])
-      local ent1 = data.entities[nsent][e1][2]
-      local ent2 = data.entities[nsent][e2][2]
-      for i=1,ent1:size(1) do res[ ent1[i] + pad ]=3 end--entity1
-      for i=1,ent2:size(1) do res[ ent2[i] + pad ]=4 end--entity2
-      return res
-   end
-   
-   local res2 = torch.Tensor()
-   entities.getenttags = function(data, nsent)
-      res2:resize(data.words[nsent]:size(1) + (2*pad)):fill(hash["O"])--create input tensor
-      for i=1,pad do
-	 res2[i]=hash["PADDING"] --1=Padding
-	 res2[res2:size(1)-pad+1] = hash["PADDING"] --1=Padding
-      end
-      for i=1,#data.entities[nsent] do
-	 local _type = data.entities[nsent][i][1]
-	 for j=1,data.entities[nsent][i][2]:size(1) do
-	    res2[data.entities[nsent][i][2][j] + pad] = hash[_type]
-	 end
-      end
-      return res2
-   end
-
-   entities.nent = function(data, nsent)
-      return #data.entities[nsent]
-   end
-
-   entities.typeent = function(data, nsent, nent)
-      return data.entities[nsent][nent][1]
-   end
-   
-   return entities
-   
-end
-
-function loadrelations_back(filename, hash, maxload, params)
-   print(string.format('loading <%s>', filename))
-   local distribution = torch.Tensor(#hash):fill(0)
-   local relations = {}
-   local count = 0
-   for line in io.lines(filename) do
-      count = count + 1
-      relations[count] = {}
-      --print(#entities+1)
-      --print(sents[#entities+1])
-      if not line:match("^[\t ]*$") then
-	 if maxload and maxload > 0 and #relations>maxload then
-	    print("break relations")
-	    break
-	 else
-	    --print(line)
-	    for relation in line:gmatch("%d+ %d+ [^%d ]+") do
-	       --print(relation)
-	       local e1 = relation:match("%d+")
-	       local e2 = relation:match("%d+ (%d+)")
-	       local _type = relation:match("%d+ %d+ ([^%d ]+)")
-	       e1 = tonumber(e1)+1
-	       e2 = tonumber(e2)+1
-	       --print(e1)
-	       --print(e2)
-	       if relations[count][e1]==nil then relations[count][e1]={} end
-	       relations[count][e1][e2] = hash[_type]--, {_type, e2})
-	       distribution[hash[_type]] = distribution[hash[_type]] + 1
-	    end
-	 end
-      end
-   end
-   
-   relations.isrelated = function(self, nsent, e1, e2)
-      --print(self[nsent])
-      --print(nsent)
-      --print(e1)
-      --print(e2)
-      return self[nsent][e1] and self[nsent][e1][e2] or hash["null"] 
-   end
-
-   -- for i=1,distribution:size(1) do
-   --    distribution[i] = distribution[i]==0 and 0 or ( 1 / distribution[i])
-   -- end
-   --distribution:norm()
-   --distribution = distribution / distribution:max()
-   --print(distribution)
-   local min = math.huge
-   for i=1,distribution:size(1) do
-      if distribution[i]~=0 and distribution[i]<min then min = distribution[i] end
-   end
-   distribution = distribution / min
-   --print(distribution)
-   relations.distribution = distribution
-   
-   return relations
-end
 
 local function loadrelations(pathdata, extention, maxload, hash, params, entities)
    local relations = {}
@@ -813,7 +732,7 @@ end
 
 
 
-local wordhash, entityhash, deptypehash, poshash, relationhash
+local wordhash, entityhash, deptypehash, poshash, relationhash, entityhash2
 
 function loadhash(params)
 
@@ -822,6 +741,7 @@ function loadhash(params)
    wordhash = wordhash or _loadhash('data/hash/word.txt', params.nword)
    entityhash = entityhash or _loadhash('data/hash/entities.txt')
    relationhash = relationhash or _loadhash("data/hash/relations.txt")
+   entityhash2 = {"PADDING", "O", "Entity1", "Entity2", PADDING=1, O=2, Entity1=3, Entity2=4} --for entity position
    
 end
 
@@ -830,7 +750,6 @@ function createdata(params)
    local pathdata = params.data
    
    local words = loadwords(pathdata, wordhash, params.addraw, wordfeature, params.maxload)
-   --pad(words, (params.wsz-1)/2, wordhash.PADDING)
    pad(words, 0, wordhash.PADDING)
    
    local starts, ends = loadstartend(pathdata, nil, params.maxload)
@@ -841,15 +760,27 @@ function createdata(params)
    local entities = loadentities(pathdata, ".ann",  params)
    load_entity_indices(entities, words, starts, ends, wordhash)
 
-   if params.anonymize then anonymize(words, entities) end
-   
    loaddag(entities)
 
    
-   
    local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash, params, entities)
 
-   return {names=names, wordhash=wordhash, entityhash=entityhash, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
+
+   -- local idx
+   -- for i=1,#names do
+   --    if names[i]=="14702153_5" then
+   -- 	 idx = i
+   --    end
+   -- end
+
+   -- printw(words[idx], wordhash)
+   -- print(entities[idx])
+   -- print(relations[idx])
+   
+   -- io.read()
+
+   
+   return {names=names, wordhash=wordhash, entityhash=entityhash, entityhash2=entityhash2, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
    
 end
 
