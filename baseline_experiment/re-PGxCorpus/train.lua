@@ -493,7 +493,7 @@ while true do
    local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
    local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
    
-   local tab = test(network, data, params) --subtraindata
+   local tab = test(network, subtraindata, params) --
 
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
    print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
@@ -511,14 +511,14 @@ while true do
    f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
    f1 = macro_f1
 
-   for i=2,#data.relationhash do
-      local f_precision = io.open(rundir .. "/" .. data.relationhash[i] .. "_precision_train", 'a')
-      local f_recall = io.open(rundir .. "/" .. data.relationhash[i] .. "_recall_train", 'a')
-      local f_f1 = io.open(rundir .. "/" .. data.relationhash[i] .. "_f1-score_train", 'a')
+   for r, _ in pairs(params.onlylabel) do
+      local f_precision = io.open(rundir .. "/" .. r .. "_precision_train", 'a')
+      local f_recall = io.open(rundir .. "/" .. r .. "_recall_train", 'a')
+      local f_f1 = io.open(rundir .. "/" .. r .. "_f1-score_train", 'a')
 
-      f_precision:write(tab[data.relationhash[i]].precision .. "\n")
-      f_recall:write(tab[data.relationhash[i]].recall .. "\n")
-      f_f1:write(tab[data.relationhash[i]].f1 .. "\n")
+      f_precision:write(tab[r].precision .. "\n")
+      f_recall:write(tab[r].recall .. "\n")
+      f_f1:write(tab[r].f1 .. "\n")
       
       f_precision:close(); f_recall:close(); f_f1:close()
    end
@@ -559,14 +559,14 @@ while true do
       f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
       f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
 
-      for i=2,#data.relationhash do
-	 local f_precision = io.open(rundir .. "/" .. data.relationhash[i] .. "_precision_valid", 'a')
-	 local f_recall = io.open(rundir .. "/" .. data.relationhash[i] .. "_recall_valid", 'a')
-	 local f_f1 = io.open(rundir .. "/" .. data.relationhash[i] .. "_f1-score_valid", 'a')
+      for r,_ in pairs(params.onlylabel) do
+	 local f_precision = io.open(rundir .. "/" .. r .. "_precision_valid", 'a')
+	 local f_recall = io.open(rundir .. "/" .. r .. "_recall_valid", 'a')
+	 local f_f1 = io.open(rundir .. "/" .. r .. "_f1-score_valid", 'a')
 	 
-	 f_precision:write(tab[data.relationhash[i]].precision .. "\n")
-	 f_recall:write(tab[data.relationhash[i]].recall .. "\n")
-	 f_f1:write(tab[data.relationhash[i]].f1 .. "\n")
+	 f_precision:write(tab[r].precision .. "\n")
+	 f_recall:write(tab[r].recall .. "\n")
+	 f_f1:write(tab[r].f1 .. "\n")
 	 
 	 f_precision:close(); f_recall:close(); f_f1:close()
       end
@@ -610,14 +610,14 @@ while true do
       f_macro_precision:close(); f_macro_recall:close(); f_macro_f1:close()
       f_micro_precision:close(); f_micro_recall:close(); f_micro_f1:close()
 
-      for i=2,#data.relationhash do
-	 local f_precision = io.open(rundir .. "/" .. data.relationhash[i] .. "_precision_test", 'a')
-	 local f_recall = io.open(rundir .. "/" .. data.relationhash[i] .. "_recall_test", 'a')
-	 local f_f1 = io.open(rundir .. "/" .. data.relationhash[i] .. "_f1-score_test", 'a')
+      for r,_ in pairs(params.onlylabel) do
+	 local f_precision = io.open(rundir .. "/" .. r .. "_precision_test", 'a')
+	 local f_recall = io.open(rundir .. "/" .. r .. "_recall_test", 'a')
+	 local f_f1 = io.open(rundir .. "/" .. r .. "_f1-score_test", 'a')
 	 
-	 f_precision:write(tab[data.relationhash[i]].precision .. "\n")
-	 f_recall:write(tab[data.relationhash[i]].recall .. "\n")
-	 f_f1:write(tab[data.relationhash[i]].f1 .. "\n")
+	 f_precision:write(tab[r].precision .. "\n")
+	 f_recall:write(tab[r].recall .. "\n")
+	 f_f1:write(tab[r].f1 .. "\n")
 	 
 	 f_precision:close(); f_recall:close(); f_f1:close()
       end
