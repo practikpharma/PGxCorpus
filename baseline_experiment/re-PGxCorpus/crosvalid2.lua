@@ -101,7 +101,7 @@ end
 
 print(tab_res)
 
-for r, _ in pairs(paramsModel.onlylabel)
+for r, _ in pairs(paramsModel.onlylabel) do
    
    local avg_p = torch.Tensor(tab_res[r].precision):mean()
    local avg_r = torch.Tensor(tab_res[r].recall):mean()
