@@ -311,7 +311,7 @@ while true do
 		     print(data.entities[idx][ent2][3])
 		     print(ent1, ent2)
 		     printw(data.words[idx], data.wordhash)
-		     error("")
+		     error("error in " .. data.names[idx])
 		  end
 		  if (not is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1])) and (not is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1])) then
 		     -- printw(data.words[idx], data.wordhash)
