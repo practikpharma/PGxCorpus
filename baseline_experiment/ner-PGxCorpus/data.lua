@@ -466,7 +466,7 @@ function onlylabel(entities, ent)
    end
 end
 
-function _load_entity_indices(ents, starts, ends)
+function _load_entity_indices(ents, starts, ends, name)
    --print("============")
    --print(ents)
    
@@ -489,7 +489,7 @@ function _load_entity_indices(ents, starts, ends)
 	       _start = _s
 	    end
 	 end
-	 assert(_start, "_start not found")
+	 assert(_start, "_start not found in " .. name)
 	 --print("start " .. _start)
 	 for _e=_start, ends:size(1) do
 	    --print(ends[_e]+_e .. " " .. ents[j][1][e][2])
@@ -499,7 +499,7 @@ function _load_entity_indices(ents, starts, ends)
 	       _end = _e
 	    end
 	 end
-	 assert(_end, "_end not found")
+	 assert(_end, "_end not found in " .. name)
 	 --print(_start .. " " .. _end)
 	 for i=_start, _end do
 	    table.insert(idx, i)
@@ -513,11 +513,11 @@ function _load_entity_indices(ents, starts, ends)
 end
 
    
-local function load_entity_indices(entities, words, starts, ends, wordhash)
+local function load_entity_indices(entities, words, starts, ends, names, wordhash)
    assert(#entities==#words.idx and #entities==#starts and #entities==#ends, #entities .. " " .. #words.idx .. " " .. #starts .. " " .. #ends)
 
    for i=1,#entities do
-      _load_entity_indices(entities[i], starts[i], ends[i])
+      _load_entity_indices(entities[i], starts[i], ends[i], names[i])
    end
    
 end
@@ -662,8 +662,8 @@ function createdata(params)
    
    words  = loadwords(pathdata, wordhash, params.addraw, wordfeature, params.maxload)
    pad(words, (params.wsz-1)/2, wordhash.PADDING)
-
-   starts, ends = loadstartend(pathdata, nil, params.maxload)
+   
+   starts, ends = loadstartend(pathdata, nil, params.maxload, names)
 
    local names = loadnames(pathdata, params.maxload)
    
@@ -672,13 +672,13 @@ function createdata(params)
    loaddag(entities)
    if params.levelmax~=math.huge then levelmax(entities, params.levelmax) end
    
-   load_entity_indices(entities, words, starts, ends, wordhash)
+   load_entity_indices(entities, words, starts, ends, names, wordhash)
    local labels = extract_pred_labels(entities, words, (params.wsz-1)/2, labelhash)
    local labels_input = extract_input_labels(entities, words, (params.wsz-1)/2, labelhash)
    
    local entities_pubtator = loadentities(pathdata, ".ann_pubtator",  params.maxload)
    loaddag(entities_pubtator)
-   load_entity_indices(entities_pubtator, words, starts, ends, wordhash)
+   load_entity_indices(entities_pubtator, words, starts, ends, names, wordhash)
    local labels_pubtator = extract_pred_labels(entities_pubtator, words, (params.wsz-1)/2, pubtatorhash)
    
    for i=1,#labels_pubtator do
