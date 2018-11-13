@@ -26,6 +26,7 @@ cmd:option('-maxnet', 10, 'max number of network to load')
 --cmd:option('-minnet', 1, 'max number of network to load')
 cmd:option('-optnet', '', 'select networks with a given option')
 cmd:option('-bestvalid', false, '')
+cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:text()
 
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -78,7 +79,7 @@ while _file and nnetwork<params.maxnet do
    network:loadnet(paramsModel, net)
    
    paramsModel.rundir = params.loaddir .. paramsModel.rundir:match("/([^/]+)$")
-
+   paramsModel.hierarchy = params.hierarchy
    print("================")
    print("tab_res")
    print(tab_res.isAssociatedWith)
