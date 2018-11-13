@@ -28,9 +28,9 @@ function equal_rel(target, prediction, hierarchy)
    if hierarchy then
       print(prediction)
       print(target)
-      print(target==prediction or (hierarchy_rel[prediction][target] or hierarchy_rel[target][prediction]))
+      print(target==prediction or ((hierarchy_rel[prediction] and hierarchy_rel[prediction][target]) or (hierarchy_rel[target] and hierarchy_rel[target][prediction])))
       io.read()
-      return target==prediction or (hierarchy_rel[prediction][target] or hierarchy_rel[target][prediction])
+      return target==prediction or ((hierarchy_rel[prediction] and hierarchy_rel[prediction][target]) or (hierarchy_rel[target] and hierarchy_rel[target][prediction]))
    else
       return target==prediction
    end
