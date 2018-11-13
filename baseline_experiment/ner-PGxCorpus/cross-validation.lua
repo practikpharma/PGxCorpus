@@ -27,6 +27,8 @@ cmd:option('-maxnet', 10, 'max number of network to load')
 cmd:option('-mobius', false, 'mobius')
 cmd:option('-optnet', '', 'select networks with a given option')
 cmd:option('-testcorpus',  '', 'corpus to teston')
+cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
+cmd:option('-softmatch', false, "soft match at test time")
 cmd:text()
 
 math.randomseed(os.time())
@@ -74,6 +76,8 @@ while _file and nnetwork<params.maxnet do
       print("now testing net " .. nnetwork)
 
       paramsModel.rundir = params.loaddir .. paramsModel.rundir:match("/([^/]+)$")
+      paramsModel.hierarchy = params.hierarchy
+      paramsModel.softmatch = params.softmatch
       print("================================ tdata")
       local tab = testfunction(networks, tagger, paramsModel, tdata, "train")
       for i=1,#tdata.entityhash do
