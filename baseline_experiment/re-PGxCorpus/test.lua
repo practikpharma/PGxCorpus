@@ -14,6 +14,17 @@ hierarchy_rel["influences"]["causes"] = true
 hierarchy_rel["influences"]["decreases"] = true
 hierarchy_rel["influences"]["increases"] = true
 hierarchy_rel["influences"]["metabolizes"] = true
+hierarchy_rel["isAssociatedWith"]["isAssociatedWith"]=true
+hierarchy_rel["isAssociatedWith"]["isExplainedBy"]=true
+hierarchy_rel["isAssociatedWith"]["treats"]=true
+hierarchy_rel["isAssociatedWith"]["transports"]=true
+hierarchy_rel["isAssociatedWith"]["influences"]=true
+hierarchy_rel["isAssociatedWith"]["increases"]=true
+hierarchy_rel["isAssociatedWith"]["decreases"]=true
+hierarchy_rel["isAssociatedWith"]["causes"]=true
+hierarchy_rel["isAssociatedWith"]["metabolizes"]=true
+print(hierarchy_rel)
+exit()
 
 function equal_rel(target, prediction, hierarchy)
    if hierarchy then
