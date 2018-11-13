@@ -26,6 +26,7 @@ hierarchy_rel["isAssociatedWith"]["metabolizes"]=true
 
 function equal_rel(target, prediction, hierarchy)
    if hierarchy then
+      exit()
       return target==prediction or (tab_rel[prediction]==target or tab_rel[target]==prediction)
    else
       return target==prediction
