@@ -23,8 +23,6 @@ hierarchy_rel["isAssociatedWith"]["increases"]=true
 hierarchy_rel["isAssociatedWith"]["decreases"]=true
 hierarchy_rel["isAssociatedWith"]["causes"]=true
 hierarchy_rel["isAssociatedWith"]["metabolizes"]=true
-print(hierarchy_rel)
-exit()
 
 function equal_rel(target, prediction, hierarchy)
    if hierarchy then
