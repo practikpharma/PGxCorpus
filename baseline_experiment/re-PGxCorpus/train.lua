@@ -172,14 +172,42 @@ local subtraindata = extract_data(data, params.validp, params.valids, false)
 
 
 --dataidx contains all the sample to be forwarded (sentence indices and couple of entities)
+-- local dataidx = {}
+-- for j=1,data.size do
+--    local n = data.entities.nent(data,j)
+--    local nrel = ((n * (n-1))/2)
+--    for k=1, nrel do
+--       table.insert(dataidx,{j,k})
+--    end
+-- end
+
 local dataidx = {}
 for j=1,data.size do
    local n = data.entities.nent(data,j)
    local nrel = ((n * (n-1))/2)
-   for k=1, nrel do
-      table.insert(dataidx,{j,k})
+   -- for k=1, nrel do
+      
+   --    table.insert(dataidx,{j,k})
+   --    if params.oriented then
+   -- 	 table.insert(dataidx,{k,j})
+   --    end
+   -- end
+
+   for k=1,n do
+      if params.oriented then
+	 for l=1,n do
+	    if k~=l then
+	       table.insert(dataidx, {j,k,l})
+	    end
+	 end
+      else
+	 for l=k+1,n do
+	    table.insert(dataidx, {j,k,l})
+	 end
+      end
    end
 end
+
 
 print("creating network")
 local network = createnetworks(params,data)
@@ -265,7 +293,9 @@ while true do
    for i=1, perm:size(1) do
       nforward = nforward + 1
       local idx = params.nosgd and dataidx[i][1] or dataidx[ perm[i] ][1] 
-      local ent_pair_idx = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
+      --local ent_pair_idx = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
+      local idx_ent_1 = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
+      local idx_ent_2 = params.nosgd and dataidx[i][3] or dataidx[ perm[i] ][3]
 
       
       --print(i)
@@ -288,52 +318,54 @@ while true do
 	    
       
       local n_ent_pair = 0
-      for ent1=1,data.entities.nent(data, idx) do
-	 for ent2=ent1+1,data.entities.nent(data, idx) do
+      --for ent1=1,data.entities.nent(data, idx) do
+	 --for ent2=ent1+1,data.entities.nent(data, idx) do
 	    --nf = nf +1
 	    --print(nf)
 	    --printw(words, datas[1].wordhash)
 	    --print(data.relations[idx])
 
 	    -- print("============================")
-	    -- print(ent1 .. " " .. ent2)
-	    -- print(data.entities[idx][ent1][3])
-	    -- print(data.entities[idx][ent2][3])
-	    -- print(data.relations:isrelated(idx, ent1, ent2))
+	    -- print(idx_ent_1 .. " " .. idx_ent_2)
+	    -- print(data.entities[idx][idx_ent_1][3])
+	    -- print(data.entities[idx][idx_ent_2][3])
+	    -- print(data.relations:isrelated(idx, idx_ent_1, idx_ent_2))
 	    
-	    n_ent_pair = n_ent_pair + 1
+	    --n_ent_pair = n_ent_pair + 1
 	    
-	    if n_ent_pair~=ent_pair_idx then
+            --if n_ent_pair~=ent_pair_idx then
+            if false then
+	    
 	       --this is not the pair of entities considered (see dataidx[ perm[i] ])
-	       --print("do not forward relation between " .. ent1 .. " and " .. ent2 .. " " .. idx) else print("do forward")
+	       --print("do not forward relation between " .. idx_ent_1 .. " and " .. idx_ent_2 .. " " .. idx) else print("do forward")
 	    else
-	       if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) or overlapp(data.entities[idx][ent1][5], data.entities[idx][ent2][5]) then
-		  if data.relations:isrelated(idx, ent1, ent2)~=data.relationhash.null then
-		     print(data.entities[idx][ent1][3])
-		     print(data.entities[idx][ent2][3])
-		     print(ent1, ent2)
+	       if is_included(data.entities[idx][idx_ent_1][1], data.entities[idx][idx_ent_2][1]) or is_included(data.entities[idx][idx_ent_2][1], data.entities[idx][idx_ent_1][1]) or overlapp(data.entities[idx][idx_ent_1][5], data.entities[idx][idx_ent_2][5]) then
+		  if data.relations:isrelated(idx, idx_ent_1, idx_ent_2)~=data.relationhash.null then
+		     print(data.entities[idx][idx_ent_1][3])
+		     print(data.entities[idx][idx_ent_2][3])
+		     print(idx_ent_1, idx_ent_2)
 		     printw(data.words[idx], data.wordhash)
 		     error("error in " .. data.names[idx])
 		  end
-		  if (not is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1])) and (not is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1])) then
+		  if (not is_included(data.entities[idx][idx_ent_1][1], data.entities[idx][idx_ent_2][1])) and (not is_included(data.entities[idx][idx_ent_2][1], data.entities[idx][idx_ent_1][1])) then
 		     -- printw(data.words[idx], data.wordhash)
-		     -- print(data.entities[idx][ent1])
-		     -- print(data.entities[idx][ent2])
+		     -- print(data.entities[idx][idx_ent_1])
+		     -- print(data.entities[idx][idx_ent_2])
 		     -- print("overlapp"); io.read()
 		  end
 		  --These entities are nested or overlapp and thus are not related
-		  -- print(data.entities[idx][ent1])
-		  -- print(data.entities[idx][ent2])
+		  -- print(data.entities[idx][idx_ent_1])
+		  -- print(data.entities[idx][idx_ent_2])
 		  -- exit()
 	       else
-		  --print(ent1, ent2)
-		  --print(nf .. " sentence " .. idx .. " relation between " .. ent1 .. " and " .. ent2 .. " (" .. data.relations:isrelated(idx, ent1, ent2) .. ")")
-		  local entities = data.entities.getent(data, idx, ent1, ent2, data)
+		  --print(idx_ent_1, idx_ent_2)
+		  --print(nf .. " sentence " .. idx .. " relation between " .. idx_ent_1 .. " and " .. idx_ent_2 .. " (" .. data.relations:isrelated(idx, idx_ent_1, idx_ent_2) .. ")")
+		  local entities = data.entities.getent(data, idx, idx_ent_1, idx_ent_2, data)
 		  if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn")  then entities = entities:view(1, entities:size(1)) end
 		  
 		  local input = {words}
 		  
-		  if params.tfsz~=0 then table.insert(input, data.entities.getenttags(data, idx, ent1, ent2)) end
+		  if params.tfsz~=0 then table.insert(input, data.entities.getenttags(data, idx, idx_ent_1, idx_ent_2)) end
 		  if params.pfsz~=0 then table.insert(input, data.pos[idx]) end
 		  if params.rdfsz~=0 then
 		     table.insert(input, data.get_relative_distance(entities, 1))
@@ -355,7 +387,7 @@ while true do
 		  --print(network.network)
 		  --print(input)
 		  if params.anonymize then
-		     input = anonymize(words, data.entities[idx], ent1, ent2, data, params)
+		     input = anonymize(words, data.entities[idx], idx_ent_1, idx_ent_2, data, params)
 		  end
 		  --print(input)
 		  --print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -394,7 +426,7 @@ while true do
 		  -- io.read()
 
 		  
-		  local target = data.relations:isrelated(idx, ent1, ent2)
+		  local target = data.relations:isrelated(idx, idx_ent_1, idx_ent_2)
 		  --printw(input[1], data.wordhash)
 		  --print(data.entities[idx])
 		  --print(data.relations[idx])
@@ -427,8 +459,8 @@ while true do
 	       end
 	    end
 	    --io.read()
-	 end
-      end
+   --end
+     -- end
       --io.read()
 
       ::continue::
