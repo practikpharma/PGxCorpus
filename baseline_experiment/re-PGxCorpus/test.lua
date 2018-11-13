@@ -138,7 +138,7 @@ function test(network, data, params)
 	       local class = data.relations:isrelated(idx, ent1, ent2)
 	       --if data.relationhash[class]=="int" then io.read() end
 	       precision_recall[class].totalpos = precision_recall[class].totalpos +1
-	       if equal_rel(class, indice, params.hierarchy) then
+	       if equal_rel(data.relationhash[class], data.relationhash[indice], params.hierarchy) then
 		  precision_recall[class].truepos = precision_recall[class].truepos+1
 	       else
 		  -- print("error")
