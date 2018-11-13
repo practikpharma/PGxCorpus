@@ -28,7 +28,7 @@ function equal_rel(target, prediction, hierarchy)
    if hierarchy then
       print(prediction)
       print(target)
-      print(hierarchy_rel)
+      print(target==prediction or (hierarchy_rel[prediction]==target or hierarchy_rel[target]==prediction))
       io.read()
       return target==prediction or (hierarchy_rel[prediction]==target or hierarchy_rel[target]==prediction)
    else
