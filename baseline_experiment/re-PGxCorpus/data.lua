@@ -43,11 +43,11 @@ function anonymize(words, entities, ent1, ent2, data, params)
    --print(entities[ent2])
    
    --first entity in first
-   if entities[ent1][5][1]>entities[ent2][5][1] then
-      local back = ent1
-      ent1 = ent2
-      ent2 = back
-   end
+   -- if entities[ent1][5][1]>entities[ent2][5][1] then
+   --    local back = ent1
+   --    ent1 = ent2
+   --    ent2 = back
+   -- end
    
    local _ws = {}
    for w=1,words:size(1) do
@@ -696,15 +696,34 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
 	    ent2 = tonumber(ent2)
 	    local _ent1 = entities.mapping[count][ent1]
 	    local _ent2 = entities.mapping[count][ent2]
-	    if _ent1>_ent2 then
-	       local temp = _ent2
-	       _ent2=_ent1
-	       _ent1=temp
-	    end
-	    assert(_ent1<_ent2)
-	    if relations[count][_ent1]==nil then relations[count][_ent1]={} end
-	    relations[count][_ent1][_ent2] = hash[_type]--, {_type, e2})
+	    -- if _ent1>_ent2 then
+	    --    local temp = _ent2
+	    --    _ent2=_ent1
+	    --    _ent1=temp
+	    -- end
+	    -- assert(_ent1<_ent2)
+	    -- if relations[count][_ent1]==nil then relations[count][_ent1]={} end
+	    -- relations[count][_ent1][_ent2] = hash[_type]--, {_type, e2})
 
+	    if not params.oriented then
+	       if _ent1>_ent2 then
+		  local temp = _ent2
+		  _ent2=_ent1
+		  _ent1=temp
+	       end
+	       assert(_ent1<_ent2)
+	       if relations[count][_ent1]==nil then relations[count][_ent1]={} end
+	       relations[count][_ent1][_ent2] = hash[_type]--, {_type, e2})
+	    else
+	       if relations[count][_ent1]==nil then relations[count][_ent1]={} end
+	       relations[count][_ent1][_ent2] = hash[_type]--, {_type, e2})
+	       if _type=="isAssociatedWith" then --all relations are oriented exept isAssociatedWith
+		  if relations[count][_ent2]==nil then relations[count][_ent2]={} end
+		  relations[count][_ent2][_ent1] = hash[_type]
+	       end
+	    end
+	    
+	    
 	    --if relations[count][ent2]==nil then relations[count][ent2]={} end
 	    --relations[count][ent2][ent1] = hash[_type]--, {_type, e2})
 	    --table.insert(rel, {ent1, ent2})
@@ -715,7 +734,9 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
    end
 
    relations.isrelated = function(self, nsent, e1, e2)
-      assert(e1<e2)
+      if not params.oriented then
+	 assert(e1<e2)
+      end
       --print(self[nsent])
       --print(nsent)
       --print(e1)

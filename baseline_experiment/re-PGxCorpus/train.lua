@@ -70,6 +70,7 @@ cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=
 cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:option('-anonymize', false, "anonymize entities")
 cmd:option('-notype', false, "do not consider relation type")
+cmd:option('-oriented', false, "extract oriented relations")
 cmd:text()
 
 local params = cmd:parse(arg)
