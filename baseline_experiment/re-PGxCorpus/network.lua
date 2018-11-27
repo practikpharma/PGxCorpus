@@ -45,7 +45,7 @@ function checklm(words, hash, params)
    end
 end
 
-function get_par(params, lkts, dropout, fixe)
+function get_par(params, lkts, dropout, data, fixe)
    local par = nn.ParallelTable()
    if params.dropout~=0 and (params.dp==1 or params.dp==3) then
       if fixe then
@@ -61,8 +61,12 @@ function get_par(params, lkts, dropout, fixe)
       else
 	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.words:clone('weight','bias')):add(d))
       end
-      if params.tfsz~=0 then local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.entitytags:clone('weight','bias')):add(d)) end
-      if params.pfsz~=0 then local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.pos:clone('weight','bias')):add(d)) end
+      if params.tfsz~=0 then
+	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.entitytags:clone('weight','bias')):add(d))
+      end
+      if params.pfsz~=0 then
+	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.pos:clone('weight','bias')):add(d))
+      end
       if params.rdfsz~=0 then
 	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.relativedistance1:clone('weight','bias')):add(d))
 	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.relativedistance2:clone('weight','bias')):add(d))
@@ -86,13 +90,16 @@ function get_par(params, lkts, dropout, fixe)
       if params.tfsz~=0 then par:add(lkts.entitytags:clone('weight','bias')) end
       if params.pfsz~=0 then par:add(lkts.pos:clone('weight','bias')) end
       if params.rdfsz~=0 then par:add(lkts.relativedistance1:clone('weight','bias')):add(lkts.relativedistance2:clone('weight','bias')) end
+      if params.nestenttype~=0 then
+	 for i=3,#data.entityhash do --not padding and Other
+	    par:add(lkts[data.entityhash[i]]:clone('weight', 'bias')) end
+	 end
    end
    par:add(lkts.entities:clone('weight','bias'))
    
    return par
 end
    
-
 function createnetworks(params, data)
    local lkts = {}
    local words = nn.LookupTable(params.nword, params.wfsz)
@@ -114,6 +121,11 @@ function createnetworks(params, data)
       relativedistance2 = nn.LookupTable(300, params.rdfsz)
       lkts.relativedistance1 = relativedistance1
       lkts.relativedistance2 = relativedistance2
+   end
+   if params.nestenttype~=0 then
+      for i=3,#data.entityhash do --not padding and Other
+	 lkts[data.entityhash[i]] = nn.LookupTable(3, params.nestenttype)
+      end
    end
    
    if params.lm then
@@ -187,6 +199,10 @@ function createnetworks(params, data)
    network = nn.Sequential()
    local net = nn.ConcatTable()
    local fsz = params.wfsz + params.efsz + params.tfsz + params.pfsz + (2*params.rdfsz)
+   if params.nestenttype~=0 then
+      for i=3,#data.entityhash do fsz = fsz + params.nestenttype end
+   end
+   print(fsz)
    local dropout = {}
    for i=1,#params.wszs do
       if params.tfsz>0 then
@@ -203,9 +219,9 @@ function createnetworks(params, data)
       
 
       local channels = nn.ConcatTable()
-      channels:add( nn.Sequential():add( get_par(params, lkts, dropout)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
+      channels:add( nn.Sequential():add( get_par(params, lkts, dropout, data)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
       if params.channels>1 then
-	 channels:add( nn.Sequential():add( get_par(params, lkts, dropout, true)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
+	 channels:add( nn.Sequential():add( get_par(params, lkts, dropout, data, true)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
       end
       if params.channels>2 then error("not implemented") end
       wszs[i]:add(channels)

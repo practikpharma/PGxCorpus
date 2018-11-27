@@ -1,5 +1,3 @@
---toto
-
 require('data')
 require('torch')
 require('nn')
@@ -71,6 +69,7 @@ cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:option('-anonymize', false, "anonymize entities")
 cmd:option('-notype', false, "do not consider relation type")
 cmd:option('-oriented', false, "extract oriented relations")
+cmd:option('-nestenttype', 0,  "add the type of the nested entity as input (using k-hot encoding)")
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -222,6 +221,7 @@ if frestart then
       print("weight")
       net = frestart:readObject()
       network:loadnet(params, net)
+      print('done')
    end
    -- print("now testing")
    -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, vdata, params)
@@ -231,12 +231,13 @@ if frestart then
    -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
    -- print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
    -- print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
+   params.brat = true
+   --rams.hierarchy=false
+   print("now testing")
    local tab = test(network, tdata, params)
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
    print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
-   print(tab.decreases)
-
-   --exit()
+   exit()
    -- print(p)
    -- print(r)
    -- print(f1)
@@ -361,16 +362,23 @@ while true do
 	       else
 		  --print(idx_ent_1, idx_ent_2)
 		  --print(nf .. " sentence " .. idx .. " relation between " .. idx_ent_1 .. " and " .. idx_ent_2 .. " (" .. data.relations:isrelated(idx, idx_ent_1, idx_ent_2) .. ")")
-		  local entities = data.entities.getent(data, idx, idx_ent_1, idx_ent_2, data)
+		  local entities = data.entities.getent(data, idx, idx_ent_1, idx_ent_2)
 		  if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn")  then entities = entities:view(1, entities:size(1)) end
 		  
 		  local input = {words}
+
 		  
 		  if params.tfsz~=0 then table.insert(input, data.entities.getenttags(data, idx, idx_ent_1, idx_ent_2)) end
 		  if params.pfsz~=0 then table.insert(input, data.pos[idx]) end
 		  if params.rdfsz~=0 then
 		     table.insert(input, data.get_relative_distance(entities, 1))
 		     table.insert(input, data.get_relative_distance(entities, 2))
+		  end
+		  if params.nestenttype>0 then
+		     local nests = data.entities.getnestenttype(data, idx, idx_ent_1, idx_ent_2)
+		     for i=1,#nests do
+			table.insert(input, nests[i])
+		     end
 		  end
 		  table.insert(input, entities)
 		  
@@ -382,6 +390,7 @@ while true do
 		     os.execute('echo my_bad_linear_net.svg')
 		  end
 
+		  data.entities.getnestenttype(data, idx, idx_ent_1, idx_ent_2)
 		  
 		  if params.time then timer2:reset() end
 
@@ -389,11 +398,29 @@ while true do
 		  --print(input)
 		  if params.anonymize then
 		     input = anonymize(words, data.entities[idx], idx_ent_1, idx_ent_2, data, params)
+		     -- print(data.entities[idx][idx_ent_1])
+		     -- print(data.entities[idx][idx_ent_2])
+		     -- for i=1,#input do
+		     -- 	print(i)
+		     -- 	local inp = input[i]
+		     -- 	for j=1,inp:size(1) do
+		     -- 	   io.write(inp[j] .. " ")
+		     -- 	end
+		     -- 	io.write("\n")
+		     -- end
 		  end
+		  --io.read()
 		  --print(input)
 		  --print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		  --io.read()
-		  
+
+		  -- print(network.network)
+		  -- local t = {}
+		  -- for i=3,#data.entityhash do
+		  --    print(input[1]:size(1))
+		  --    table.insert(input, 2, torch.Tensor(input[1]:size(1)):fill(2))
+		  -- end
+		  --print(input)
 		  local output
 		  output = network:forward(input)
 		  if params.time then timeforward = timeforward + timer2:time().real end

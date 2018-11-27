@@ -36,6 +36,36 @@ function anon_getenttags(data, words, entities, e1, e2)
    return anon_res2
 end
 
+local anon_res_nestenttype = {}
+function anon_getnestenttype(data, words, entities, e1, e2)
+   --print(entities[e1])
+   --print(entities[e2])
+	 
+   local nest_e1 = is_nested_in(entities[e1], data.entityhash)
+   local nest_e2 = is_nested_in(entities[e2], data.entityhash)
+   --print(nest_e1)
+   --print(nest_e2)
+   local ent1 = entities[e1][6]
+   local ent2 = entities[e2][6]
+   
+   --print(ent1)
+   --print(ent2)
+   for i=3,#data.entityhash do --not for padding and Other
+      --print(data.entityhash[i] .. " (" .. i .. ")")
+      anon_res_nestenttype[i-2] = anon_res_nestenttype[i-2] or torch.Tensor()
+      anon_res_nestenttype[i-2]:resize(words:size(1)):fill(2) --1 for Padding 2 for not present 3 for present
+      for j=1,#ent1 do anon_res_nestenttype[i-2][ ent1[j] ] = nest_e1[i] and 3 or 2 end
+      for j=1,#ent2 do anon_res_nestenttype[i-2][ ent2[j] ] = nest_e2[i] and 3 or 2 end
+      -- for k=1,anon_res_nestenttype[i-2]:size(1) do
+      -- 	 io.write(anon_res_nestenttype[i-2][k] .. " ")
+      -- end
+      -- io.write("\n")
+      --print(res_nestenttype[i-2]:clone():resize(1, res_nestenttype[i-2]:size(1)))
+   end
+   --io.read()
+   return anon_res_nestenttype
+end
+
 
 function anonymize(words, entities, ent1, ent2, data, params)
    --printw(words, data.wordhash)
@@ -154,9 +184,15 @@ function anonymize(words, entities, ent1, ent2, data, params)
    if params.tfsz>0 then
       table.insert(new_input, ents2)
    end
+   if params.nestenttype>0 then
+      local nests = anon_getnestenttype(data, new_words, entities, ent1, ent2)
+      --print(nests)
+      for i=1,#nests do
+	 table.insert(new_input, nests[i])
+      end
+   end
    table.insert(new_input, ents1)
    return new_input
-   
 end
 
 local function loadnames(pathdata, maxload)
@@ -223,6 +259,20 @@ function setlevel(ent, contiguous)
    end
 end
 
+--
+function is_nested_in(ent, entityhash)
+   local res = {}
+   _is_nested_in(ent, entityhash, res)
+   return res
+end
+
+function _is_nested_in(ent, entityhash, res)
+   for i=1,#ent.sons do
+      res[entityhash[ ent.sons[i][2] ]] = true
+      --res[ ent.sons[i][2] ] = true
+      _is_nested_in(ent.sons[i], entityhash, res)
+   end
+end
 
 function _load_entity_indices(ents, starts, ends)
    --print("============")
@@ -589,7 +639,7 @@ local function pad(tbl, sz, val)
    end})
 end
 
-local function loadentities(pathdata, extention, params)
+local function loadentities(pathdata, extention, params, entityhash)
    local entities = {}
    local mapping = {}
    
@@ -632,7 +682,7 @@ local function loadentities(pathdata, extention, params)
 
 
    local res = torch.Tensor()
-   entities.getent = function(data, nsent, e1, e2, data)
+   entities.getent = function(data, nsent, e1, e2)
       res:resize(data.words[nsent]:size(1)):fill( data.entityhash2.O )
       --printw(data.words[nsent], data.wordhash)
       --print(nsent)
@@ -657,6 +707,48 @@ local function loadentities(pathdata, extention, params)
       return res2
    end
 
+   local res_nestenttype = {}
+   for i=3,#entityhash do
+      table.insert(res_nestenttype, torch.Tensor())
+   end
+   entities.getnestenttype = function(data, nsent, e1, e2)
+      --print(data.entities[nsent])
+      --print(data.entities[nsent][e1])
+      local nest_e1 = is_nested_in(data.entities[nsent][e1], data.entityhash)
+      local nest_e2 = is_nested_in(data.entities[nsent][e2], data.entityhash)
+      --print(nest_e1)
+      --print(nest_e2)
+      local ent1 = data.entities[nsent][e1][5]
+      local ent2 = data.entities[nsent][e2][5]
+
+      --print(ent1)
+      --print(ent2)
+      for i=3,#data.entityhash do --not for padding and Other
+	 --print(data.entityhash[i] .. " (" .. i .. ")")
+       	 res_nestenttype[i-2]:resize(data.words[nsent]:size(1)):fill(2) --1 for Padding 2 for not present 3 for present
+      	 for j=1,#ent1 do res_nestenttype[i-2][ ent1[j] ] = nest_e1[i] and 3 or 2 end
+	 for j=1,#ent2 do res_nestenttype[i-2][ ent2[j] ] = nest_e2[i] and 3 or 2 end
+	 -- for k=1,res_nestenttype[i-2]:size(1) do
+	 --    io.write(res_nestenttype[i-2][k] .. " ")
+	 -- end
+	 -- io.write("\n")
+	 --print(res_nestenttype[i-2]:clone():resize(1, res_nestenttype[i-2]:size(1)))
+      end
+      
+      
+
+      --io.read()
+      --res2:resize(data.words[nsent]:size(1)):fill(data.entityhash["O"])--create input tensor
+      -- local _type1 = data.entities[nsent][e1][2]
+      -- local _type2 = data.entities[nsent][e2][2]
+      -- local ent1 = data.entities[nsent][e1][5]
+      -- local ent2 = data.entities[nsent][e2][5]
+      -- for i=1,#ent1 do res2[ ent1[i] ] = data.entityhash[_type1] end--entity1
+      -- for i=1,#ent2 do res2[ ent2[i] ] = data.entityhash[_type2] end--entity2
+      -- return res2
+      return res_nestenttype
+   end
+   
    
    entities.nent = function(data, nsent)
       return #data.entities[nsent]
@@ -783,7 +875,7 @@ function createdata(params)
    local names = loadnames(pathdata, params.maxload)
    --print(names)
    
-   local entities = loadentities(pathdata, ".ann",  params)
+   local entities = loadentities(pathdata, ".ann",  params, entityhash)
    load_entity_indices(entities, words, starts, ends, wordhash)
 
    loaddag(entities)
@@ -877,7 +969,9 @@ function extract_data(data, percentage, sector, remove)
    newdata.entities.typeent = data.entities.typeent
    newdata.entities.getent = data.entities.getent
    newdata.entities.getenttags = data.entities.getenttags
-
+   newdata.entities.getnestenttype = data.entities.getnestenttype
+   
+   
    newdata.relations.isrelated = data.relations.isrelated
    
    data.size = #data.words.idx

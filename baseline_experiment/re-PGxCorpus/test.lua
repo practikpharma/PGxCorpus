@@ -32,8 +32,55 @@ function equal_rel(target, prediction, hierarchy)
    end
 end
 
+function _forward(data, idx, ent1, ent2, network, criterion, params)
+   local words = data.words[idx]
+   local entities = data.entities.getent(data, idx, ent1, ent2)
+   
+   local input = {words}
+   if params.tfsz~=0 then table.insert(input, data.entities.getenttags(data, idx, ent1, ent2)) end
+   if params.pfsz~=0 then table.insert(input, data.pos[idx]) end
+   if params.rdfsz~=0 then
+      table.insert(input, data.get_relative_distance(entities, 1))
+      table.insert(input, data.get_relative_distance(entities, 2))
+   end
+   if params.nestenttype>0 then
+      local nests = data.entities.getnestenttype(data, idx, ent1, ent2)
+      for i=1,#nests do
+	 table.insert(input, nests[i])
+      end
+   end
+   table.insert(input, entities)
+   
+   if params.anonymize then
+      input = anonymize(words, data.entities[idx], ent1, ent2, data, params)
+   end
+	       
+   local output = network:forward(input)
+   
+   local target = data.relations:isrelated(idx, ent1, ent2)
+   local cost = criterion:forward(output, target)
 
+   return cost, output
+end
 
+function _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice)
+   --if data.relationhash[class]=="int" then io.read() end
+   precision_recall[class].totalpos = precision_recall[class].totalpos +1
+   if equal_rel(data.relationhash[class], data.relationhash[indice], params.hierarchy) then
+      precision_recall[class].truepos = precision_recall[class].truepos+1
+      confusion_matrix[class][class] = confusion_matrix[class][class] + 1
+   else
+      -- print("error")
+      if false then
+	 printw(words, data.wordhash)
+	 print(data.relationhash[class] .. " but classified as " .. data.relationhash[indice]) 
+	 io.read()
+      end
+      precision_recall[indice].falsepos = precision_recall[indice].falsepos + 1
+      confusion_matrix[class][indice] = confusion_matrix[class][indice] + 1
+   end
+end
+   
 function test(network, data, params)
    
    local timer = torch.Timer()
@@ -64,20 +111,9 @@ function test(network, data, params)
    end
    
    for idx=1,data.size do
-
       --print(idx .. " " .. data.words[idx]:size(1) .. "/" .. data.size)
       -- print(data.words[idx]:size(1))
-      -- print(data.trees[idx])
-      --print(data.ids[idx])
       --printw(data.words[idx], data.wordhash)
-
-      -- print(data.names[idx])
-      -- print(data.relations[idx])
-      -- print(data.entities[idx])
-      
-      
-      local words = data.words[idx]
-      if (params.dp==2 or params.dp==3  or params.rnn=="lstm" or params.rnn=="cnn") then words = words:view(1,words:size(1)) end
       
       if data.entities.nent(data,idx)<2 then
       else
@@ -86,9 +122,9 @@ function test(network, data, params)
       end      
 
       local relations_predicted = {}
-      
+
       for ent1=1,data.entities.nent(data,idx) do
-	 for ent2=ent1+1,data.entities.nent(data,idx) do
+	 for ent2=ent1+1,data.entities.nent(data,idx) do --
 	    if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) or overlapp(data.entities[idx][ent1][5], data.entities[idx][ent2][5]) then
 	       if data.relations:isrelated(idx, ent1, ent2)~=data.relationhash.null then
 		  print(data.entities[idx][ent1][3])
@@ -100,65 +136,192 @@ function test(network, data, params)
 	       --These entities are nested or overlapp and thus are not related
 	    else
 	       --print("relation between " .. ent1 .. " and " .. ent2 .. " (" .. data.relations:isrelated(idx, ent1, ent2) .. ")")
-	       local entities = data.entities.getent(data, idx, ent1, ent2, data)
-	       if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn") then entities = entities:view(1, entities:size(1)) end
+	       local c, output = _forward(data, idx, ent1, ent2, network, criterion, params) 
+	       cost = cost + c
 	       
-	       local input = {words}
-	       if params.tfsz~=0 then table.insert(input, data.entities.getenttags(data, idx, ent1, ent2)) end
-	       if params.pfsz~=0 then table.insert(input, data.pos[idx]) end
-	       if params.rdfsz~=0 then
-		  table.insert(input, data.get_relative_distance(entities, 1))
-		  table.insert(input, data.get_relative_distance(entities, 2))
-	       end
-	       table.insert(input, entities)
-
-	       if params.anonymize then
-		  input = anonymize(words, data.entities[idx], ent1, ent2, data, params)
-	       end
-
+	       local max_1, indice_1 = output:max(1)
+	       indice_1 = indice_1[1]
+	       max_1 = max_1[1]
 	       
-	       local output
-	       output = network:forward(input)
-	       
-	       local target = data.relations:isrelated(idx, ent1, ent2)
+	       if params.oriented then
+		  local c, output_2 = _forward(data, idx, ent2, ent1, network, criterion, params) 
+		  cost = cost + c
+		  local max_2, indice_2 = output_2:max(1)
+		  indice_2 = indice_2[1]
+		  max_2 = max_2[1]
 
-	       cost = cost + criterion:forward(output, target)
-	       
-	       if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn") then output = output[1] end
 
-	       local max, indice = output:max(1)
-	       indice = indice[1]
-
-	       --print(target .. " " .. indice)
-	       
-	       local class = data.relations:isrelated(idx, ent1, ent2)
-	       --if data.relationhash[class]=="int" then io.read() end
-	       precision_recall[class].totalpos = precision_recall[class].totalpos +1
-	       if equal_rel(data.relationhash[class], data.relationhash[indice], params.hierarchy) then
-		  precision_recall[class].truepos = precision_recall[class].truepos+1
-	       else
-		  -- print("error")
-		  if false then
-		     printw(words, data.wordhash)
-		     print(data.relationhash[class] .. " but classified as " .. data.relationhash[indice]) 
-		     io.read()
-		  end
-		  precision_recall[indice].falsepos = precision_recall[indice].falsepos + 1
-	       end
-	       confusion_matrix[class][indice] = confusion_matrix[class][indice] + 1
-
-	       if params.brat then
-		  if indice~=data.relationhash["null"] then
-		     if not relations_predicted[ent1] then
-			relations_predicted[ent1] = {}
+		  if true then --new version
+		     if params.hierarchy then
+			local class = data.relations:isrelated(idx, ent1, ent2)
+			if class==data.relationhash["isAssociatedWith"] then --gold is isAssociatedWith (the only undirected relation)
+			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
+			      --since isAssociatedWith is undirected, only one true positive isAssociatedWith is counted
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      print("toto1")
+			   elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
+			      --relation in both direction. Since isAssociatedWith is undirected, both can be correct 
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			   elseif indice_1~=data.relationhash["null"] then --only one relation between ent1 and ent2 
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      --we do not penalize the model for not finding the isAssociated in the other direction
+			      --since it is undirected
+			      print("toto2")
+			   elseif indice_2~=data.relationhash["null"] then --only one relation between ent2 and ent1 
+			      local class = data.relations:isrelated(idx, ent2, ent1)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			      print("toto3")
+			      --same comment as the one above
+			   end
+			else --gold is not isAssociatedWith
+			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
+			      --since isAssociatedWith is undirected, only one isAssociatedWith is considered
+			      local class1 = data.relations:isrelated(idx, ent1, ent2)
+			      local class2 = data.relations:isrelated(idx, ent2, ent1)
+			      local class = class1~=data.relationhash["null"] and class1 or class2
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      print("toto4")
+			   elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
+			      --relation in both direction. Let's choose the best scoring one (the other one is set to "null").
+			      if max_1>max_2 then indice_2 = data.relationhash["null"]
+			      else indice_1 = data.relationhash["null"] end
+			      local class = data.relations:isrelated(idx, ent1, ent2)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      local class = data.relations:isrelated(idx, ent2, ent1)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			   else
+			      local class = data.relations:isrelated(idx, ent1, ent2)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      local class = data.relations:isrelated(idx, ent2, ent1)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			   end
+			end
+		     else --no hierarchy
+			error("to do")
 		     end
-		     relations_predicted[ent1][ent2]=indice
+		  
+		  elseif true then --all relation in both direction
+		     local class = data.relations:isrelated(idx, ent1, ent2)
+		     _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+		     local class = data.relations:isrelated(idx, ent2, ent1)
+		     _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+		     if params.brat then
+			if indice_1~=data.relationhash["null"] then
+			   if not relations_predicted[ent1] then
+			      relations_predicted[ent1] = {}
+			   end
+			   relations_predicted[ent1][ent2]=indice_1
+			end
+		     end
+		     if params.brat then
+			if indice_2~=data.relationhash["null"] then
+			   if not relations_predicted[ent2] then
+			      relations_predicted[ent2] = {}
+			      end
+			   relations_predicted[ent2][ent1]=indice_2
+			end
+		     end
+		  else
+		     if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
+			print("toto")
+			local class = data.relations:isrelated(idx, ent1, ent2)
+			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			if params.brat then
+			   if indice_1~=data.relationhash["null"] then
+			      if not relations_predicted[ent1] then
+				 relations_predicted[ent1] = {}
+			      end
+			      relations_predicted[ent1][ent2]=indice_1
+			   end
+			end
+			local class = data.relations:isrelated(idx, ent1, ent2)
+			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			if params.brat then
+			   if indice_1~=data.relationhash["null"] then
+			      if not relations_predicted[ent1] then
+				 relations_predicted[ent1] = {}
+			      end
+			      relations_predicted[ent1][ent2]=indice_1
+			   end
+			end
+		     elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
+			--relation in both direction. Let's choose the best scoring one (the other one is set to "null").
+			--print(max_1 .. " " .. max_2)
+			if max_1>max_2 then
+			   indice_2 = data.relationhash["null"]
+			else
+			   indice_1 = data.relationhash["null"]
+			end
+			local class = data.relations:isrelated(idx, ent1, ent2)
+			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			local class = data.relations:isrelated(idx, ent2, ent1)
+			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			if params.brat then
+			   if indice_1~=data.relationhash["null"] then
+			      if not relations_predicted[ent1] then
+				 relations_predicted[ent1] = {}
+				 end
+			      relations_predicted[ent1][ent2]=indice_1
+			   end
+			end
+			if params.brat then
+			   if indice_2~=data.relationhash["null"] then
+			      if not relations_predicted[ent2] then
+				 relations_predicted[ent2] = {}
+			      end
+			      relations_predicted[ent2][ent1]=indice_2
+			   end
+			end
+		     else
+			local class = data.relations:isrelated(idx, ent1, ent2)
+			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			local class = data.relations:isrelated(idx, ent2, ent1)
+			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			if params.brat then
+			   if indice_1~=data.relationhash["null"] then
+			      if not relations_predicted[ent1] then
+				 relations_predicted[ent1] = {}
+			      end
+			      relations_predicted[ent1][ent2]=indice_1
+			   end
+			end
+			if params.brat then
+			   if indice_2~=data.relationhash["null"] then
+			      if not relations_predicted[ent2] then
+				 relations_predicted[ent2] = {}
+			      end
+			      relations_predicted[ent2][ent1]=indice_2
+			   end
+			end
+		     end
 		  end
+
+		  -- if data.relationhash[indice]=="isEquivalentTo" or data.relationhash[class]=="isEquivalentTo"then
+		  --    print("expected class " .. data.relationhash[class] .. " | predicted class " .. data.relationhash[indice] .. " (" .. ent1 .. " " .. ent2 .. ")")
+		  -- end
+		  
+	       else --not oriented
+		  local class = data.relations:isrelated(idx, ent1, ent2)
+		  _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+		  if params.brat then
+		     if indice_1~=data.relationhash["null"] then
+			if not relations_predicted[ent1] then
+			   relations_predicted[ent1] = {}
+			end
+			relations_predicted[ent1][ent2]=indice_1
+		     end
+		  end
+
 	       end
+	       
+	       
+	       --print("expected class " .. data.relationhash[class] .. " | predicted class " .. data.relationhash[indice] .. " (" .. ent1 .. " " .. ent2 .. ")" )
+	       
 	    end
 	 end
       end
-
+      
       if params.brat then
 	 local fwords = io.open("gold/" .. data.names[idx] .. ".txt", "w")
 	 
@@ -227,14 +390,26 @@ function test(network, data, params)
       
    end
 
+   print(data.relationhash)
+   
+   for i=1,#data.relationhash do
+      for j=1,confusion_matrix[i]:size(1) do
+	 io.write(confusion_matrix[i][j] .. "\t")
+      end
+      io.write(data.relationhash[i] .. " " .. confusion_matrix[i]:sum())
+      io.write("\n")
+   end
+   --print(confusion_matrix)
 
-	 
+   for i=2,#data.relationhash do
+      local p = confusion_matrix[i][i]/confusion_matrix[i]:sum()
+      local r = confusion_matrix[i][i]/ confusion_matrix:narrow(2,i,1):sum()
+      print(data.relationhash[i] .. " p " .. p .. " r " .. r)
+   end
    
    local t = timer:time().real
    print(string.format('test corpus processed in %.2f seconds (%.2f sentences/s)', t, data.size/t))
 
-
-      
    
    cost = cost/nforward
 
@@ -291,14 +466,17 @@ function test(network, data, params)
    
    --print(data.relationhash)
    print("\t\tP\tR")
-   for k,i in pairs(class_to_consider) do
-      print("Class " .. i .. ":\t" .. string.format('%.2f',precisions[i]) .. "\t" .. string.format('%.2f',recalls[i])) 
+   table.sort(class_to_consider, function(a,b) return a<b end) 
+   print(class_to_consider)
+   --for k,i in pairs(class_to_consider) do
+   for j=1,#class_to_consider do
+      local i = class_to_consider[j]
+      print("Class " .. i .. ":\t" .. string.format('%.2f',precisions[i]) .. "\t" .. string.format('%.2f',recalls[i]) .. " " .. data.relationhash[i])
    end
-
 
    local tab_return = {}
    for k,i in pairs(class_to_consider) do
-      print(data.relationhash[i])
+      --print(data.relationhash[i])
       tab_return[ data.relationhash[i] ] = {precision = precisions[i], recall = recalls[i], f1 = (2*precisions[i]*recalls[i])/(precisions[i]+recalls[i]) }
       tab_return[ data.relationhash[i] ].precision = tab_return[ data.relationhash[i] ].precision==tab_return[ data.relationhash[i] ].precision and tab_return[ data.relationhash[i] ].precision or 0
       tab_return[ data.relationhash[i] ].recall = tab_return[ data.relationhash[i] ].recall==tab_return[ data.relationhash[i] ].recall and tab_return[ data.relationhash[i] ].recall or 0
@@ -307,7 +485,9 @@ function test(network, data, params)
    tab_return["macro_avg"] = {precision=macro_P or 0, recall=macro_R or 0, f1=macro_f1score or 0}
    tab_return["micro_avg"] = {precision=micro_P or 0, recall=micro_R or 0, f1=micro_f1score or 0}
    tab_return.cost = cost
-
+   
+   print(tab_return["influences"])
+   print(precision_recall[data.relationhash["influences"]])
    
    
    --return (macro_P or 0), (macro_R or 0), (macro_f1score or 0), cost, micro_P, micro_R, micro_f1score

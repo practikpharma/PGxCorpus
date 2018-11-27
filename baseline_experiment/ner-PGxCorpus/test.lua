@@ -386,7 +386,6 @@ function test(networks, tagger, params, data, corpus)
       end
 
       
-      
       if params.brat then
 	 --print(data.labels_pubtator[idx][1])
 	 local pubtator_nopad = data.labels_pubtator[idx][1]:narrow(1,pad+1, data.labels_pubtator[idx][1]:size(1)-(2*pad)) 
