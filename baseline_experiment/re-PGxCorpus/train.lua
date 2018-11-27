@@ -211,8 +211,6 @@ end
 
 print("creating network")
 local network = createnetworks(params,data)
-print(network.network)
-exit()
 
 if frestart then
    print('reloading network')
