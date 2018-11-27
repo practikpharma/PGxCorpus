@@ -71,6 +71,13 @@ function get_par(params, lkts, dropout, data, fixe)
 	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.relativedistance1:clone('weight','bias')):add(d))
 	 local d = nn.Dropout(params.dropout); table.insert(dropout, d); par:add(nn.Sequential():add(lkts.relativedistance2:clone('weight','bias')):add(d))
       end
+      if params.nestenttype~=0 then
+	 for i=3,#data.entityhash do --not padding and Other
+	    local d = nn.Dropout(params.dropout); table.insert(dropout, d)
+	    par:add(nn.Sequential():add(lkts[data.entityhash[i]]:clone('weight', 'bias')):add(d))
+	 end
+      end
+
    else
       if fixe then
 	 local lkt = lkts.words:clone()
@@ -93,7 +100,7 @@ function get_par(params, lkts, dropout, data, fixe)
       if params.nestenttype~=0 then
 	 for i=3,#data.entityhash do --not padding and Other
 	    par:add(lkts[data.entityhash[i]]:clone('weight', 'bias')) end
-	 end
+      end
    end
    par:add(lkts.entities:clone('weight','bias'))
    
