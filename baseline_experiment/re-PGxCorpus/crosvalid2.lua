@@ -25,7 +25,6 @@ cmd:option('-loaddir', '', 'models to load')
 cmd:option('-maxnet', 10, 'max number of network to load')
 --cmd:option('-minnet', 1, 'max number of network to load')
 cmd:option('-optnet', '', 'select networks with a given option')
-cmd:option('-bestvalid', false, '')
 cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:text()
 

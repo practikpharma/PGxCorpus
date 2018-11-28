@@ -102,7 +102,8 @@ function test(network, data, params)
    
    local cost = 0
    local nforward = 0
-
+   local toto = {0,0,0,0,0}
+   
    local confusion_matrix = torch.Tensor(#data.relationhash, #data.relationhash):fill(0)
    
    local precision_recall = {}
@@ -158,7 +159,8 @@ function test(network, data, params)
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
 			      --since isAssociatedWith is undirected, only one true positive isAssociatedWith is counted
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			      print("toto1")
+			      --print("toto1")
+			      toto[1] = toto[1]+1
 			   elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
 			      --relation in both direction. Since isAssociatedWith is undirected, both can be correct 
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
@@ -167,12 +169,18 @@ function test(network, data, params)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      --we do not penalize the model for not finding the isAssociated in the other direction
 			      --since it is undirected
-			      print("toto2")
+			      --print("toto2")
+			      toto[2] = toto[2]+1
 			   elseif indice_2~=data.relationhash["null"] then --only one relation between ent2 and ent1 
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			      --print("toto3")
+			      toto[3] = toto[3]+1
+			      --same comment as the one above
+			   else
+			      local class = data.relations:isrelated(idx, ent1, ent2)
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      local class = data.relations:isrelated(idx, ent2, ent1)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
-			      print("toto3")
-			      --same comment as the one above
 			   end
 			else --gold is not isAssociatedWith
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
@@ -181,7 +189,8 @@ function test(network, data, params)
 			      local class2 = data.relations:isrelated(idx, ent2, ent1)
 			      local class = class1~=data.relationhash["null"] and class1 or class2
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			      print("toto4")
+			      --print("toto5")
+			      --toto[5] = toto[5]+1
 			   elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
 			      --relation in both direction. Let's choose the best scoring one (the other one is set to "null").
 			      if max_1>max_2 then indice_2 = data.relationhash["null"]
@@ -390,6 +399,9 @@ function test(network, data, params)
       
    end
 
+   print("nb toto " .. toto[1] .. " + " .. toto[2] .. " + " .. toto[3] .. " + " .. toto[4] .. " + " .. toto[5] .. " = " .. toto[1]+toto[2]+toto[3]+toto[4]+toto[5] )
+
+   
    print(data.relationhash)
    
    for i=1,#data.relationhash do
@@ -402,8 +414,8 @@ function test(network, data, params)
    --print(confusion_matrix)
 
    for i=2,#data.relationhash do
-      local p = confusion_matrix[i][i]/confusion_matrix[i]:sum()
-      local r = confusion_matrix[i][i]/ confusion_matrix:narrow(2,i,1):sum()
+      local r = confusion_matrix[i]:sum()==0 and 1 or confusion_matrix[i][i]/confusion_matrix[i]:sum()
+      local p = confusion_matrix:narrow(2,i,1):sum()==0 and 1 or confusion_matrix[i][i]/ confusion_matrix:narrow(2,i,1):sum()
       print(data.relationhash[i] .. " p " .. p .. " r " .. r)
    end
    
@@ -423,18 +435,18 @@ function test(network, data, params)
    end
    
    --computing evaluation measures
-   --macro-average (avg min and presicion over all categories)
+   --macro-average (avg r and p over all categories)
    local recalls, precisions = {}, {}
    local macro_R, macro_P = 0, 0
    for k,i in pairs(class_to_consider) do
       --print(data.relationhash[i])
       local a = precision_recall[i].truepos
       local b = precision_recall[i].totalpos
-      recalls[i] = (a==0 and b==0 and 0 or a/b)
+      recalls[i] = (b==0 and 1 or a/b)
       --print("a " .. a .. " b " .. b .. " R " .. recalls[i])
       local a = precision_recall[i].truepos
       local b = precision_recall[i].truepos + precision_recall[i].falsepos
-      precisions[i] = (a==0 and b==0 and 0 or a/b)
+      precisions[i] = (b==0 and 1 or a/b)
       --print("a " .. a .. " b " .. b .. " P " .. precisions[i] .. " fp " .. precision_recall[i].falsepos)
             
       macro_R = macro_R + ((recalls[i]==recalls[i]) and recalls[i] or 0)
@@ -455,11 +467,11 @@ function test(network, data, params)
    local a = _truepos
    local b = _totalpos
    --print("a " .. a .. " b " .. b)
-   local micro_R = (a==0 and b==0 and 0 or a/b) 
+   local micro_R = (b==0 and 1 or a/b) 
    local a = _truepos
    local b = _truepos + _falsepos
    --print("a " .. a .. " b " .. b)
-   local micro_P = (a==0 and b==0 and 0 or a/b)
+   local micro_P = (b==0 and 1 or a/b)
    local micro_f1score = (2 * micro_R * micro_P) / (micro_R + micro_P)
    micro_f1score = micro_f1score==micro_f1score and micro_f1score or 0
 
