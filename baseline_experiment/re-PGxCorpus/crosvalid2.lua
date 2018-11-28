@@ -49,6 +49,7 @@ for i=1,#tab_rel do
    tab_res[ tab_rel[i] ] = {f1={}, precision={}, recall={}}
 end
 tab_res.macro = {f1={}, precision={}, recall={}}
+tab_res.micro = {f1={}, precision={}, recall={}}
 
 
 local nbnet = 0
@@ -66,7 +67,7 @@ while _file and nnetwork<params.maxnet do
    if nnetwork==1 then
       loadhash(paramsModel)
    end
-
+   
    data = createdata(paramsModel)
    vdata = extract_data(data, paramsModel.validp, paramsModel.valids, true)
    tdata = extract_data(data, paramsModel.validp, paramsModel.valids, true)
@@ -94,7 +95,10 @@ while _file and nnetwork<params.maxnet do
    table.insert(tab_res.macro.recall, tab.macro_avg.recall)
    table.insert(tab_res.macro.precision, tab.macro_avg.precision)
    table.insert(tab_res.macro.f1, tab.macro_avg.f1)
-  
+   table.insert(tab_res.micro.recall, tab.micro_avg.recall)
+   table.insert(tab_res.micro.precision, tab.micro_avg.precision)
+   table.insert(tab_res.micro.f1, tab.micro_avg.f1)
+   
    _file = handle:read()
 end
 

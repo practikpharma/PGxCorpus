@@ -438,11 +438,14 @@ function test(network, data, params)
    --macro-average (avg r and p over all categories)
    local recalls, precisions = {}, {}
    local macro_R, macro_P = 0, 0
+   local nb_recall, nb_precision = 0,0
    for k,i in pairs(class_to_consider) do
       --print(data.relationhash[i])
       local a = precision_recall[i].truepos
       local b = precision_recall[i].totalpos
+
       recalls[i] = (a==0 and b==0 and 0 or a/b)
+      --recalls[i] = a/b
       --recalls[i] = (b==0 and 1 or a/b)
 
       --print("a " .. a .. " b " .. b .. " R " .. recalls[i])
@@ -450,13 +453,28 @@ function test(network, data, params)
       local b = precision_recall[i].truepos + precision_recall[i].falsepos
 
       precisions[i] = (a==0 and b==0 and 0 or a/b)
+      --precisions[i] = a/b
       --precisions[i] = (b==0 and 1 or a/b)
 
       --print("a " .. a .. " b " .. b .. " P " .. precisions[i] .. " fp " .. precision_recall[i].falsepos)
-            
+
+      -- if recalls[i]==recalls[i] then
+      -- 	 macro_R = macro_R + recalls[i] 
+      -- 	 nb_recall = nb_recall + 1
+      -- else
+      -- 	 --macro_R = macro_R + 0; nb_recall = nb_recall + 1
+      -- end
+      -- if precisions[i]==precisions[i] then
+      -- 	 macro_P = macro_P + precisions[i] 
+      -- 	 nb_precision = nb_precision + 1
+      -- else
+      -- 	 --macro_P = macro_P + 0; nb_precision = nb_precision + 1
+      -- end
       macro_R = macro_R + ((recalls[i]==recalls[i]) and recalls[i] or 0)
       macro_P = macro_P + ((precisions[i]==precisions[i]) and precisions[i] or 0)
    end
+   --macro_R = macro_R/nb_recall
+   --macro_P = macro_P/nb_precision
    macro_R = macro_R / (#class_to_consider)
    macro_P = macro_P / (#class_to_consider)
    local macro_f1score = (2 * macro_R * macro_P) / (macro_R + macro_P)
@@ -472,18 +490,19 @@ function test(network, data, params)
    local a = _truepos
    local b = _totalpos
    --print("a " .. a .. " b " .. b)
-   local micro_R = (a==0 and b==0 and 0 or a/b) 
+   local micro_R = (a==0 and b==0 and 0 or a/b)
+   --local micro_R = a/b
    --local micro_R = (b==0 and 1 or a/b) 
-
+   
    local a = _truepos
    local b = _truepos + _falsepos
    --print("a " .. a .. " b " .. b)
    local micro_P = (a==0 and b==0 and 0 or a/b)
+   --local micro_P = a/b
    --local micro_P = (b==0 and 1 or a/b)
    
    local micro_f1score = (2 * micro_R * micro_P) / (micro_R + micro_P)
    micro_f1score = micro_f1score==micro_f1score and micro_f1score or 0
-
    
    --print(data.relationhash)
    print("\t\tP\tR")
@@ -494,7 +513,7 @@ function test(network, data, params)
       local i = class_to_consider[j]
       print("Class " .. i .. ":\t" .. string.format('%.2f',precisions[i]) .. "\t" .. string.format('%.2f',recalls[i]) .. " " .. data.relationhash[i])
    end
-
+   
    local tab_return = {}
    for k,i in pairs(class_to_consider) do
       --print(data.relationhash[i])
@@ -509,7 +528,6 @@ function test(network, data, params)
    
    print(tab_return["influences"])
    print(precision_recall[data.relationhash["influences"]])
-   
    
    --return (macro_P or 0), (macro_R or 0), (macro_f1score or 0), cost, micro_P, micro_R, micro_f1score
    return tab_return
