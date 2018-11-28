@@ -444,17 +444,17 @@ function test(network, data, params)
       local a = precision_recall[i].truepos
       local b = precision_recall[i].totalpos
 
-      recalls[i] = (a==0 and b==0 and 0 or a/b)
+      --recalls[i] = (a==0 and b==0 and 0 or a/b)
       --recalls[i] = a/b
-      --recalls[i] = (b==0 and 1 or a/b)
+      recalls[i] = (b==0 and 1 or a/b)
 
       --print("a " .. a .. " b " .. b .. " R " .. recalls[i])
       local a = precision_recall[i].truepos
       local b = precision_recall[i].truepos + precision_recall[i].falsepos
 
-      precisions[i] = (a==0 and b==0 and 0 or a/b)
+      --precisions[i] = (a==0 and b==0 and 0 or a/b)
       --precisions[i] = a/b
-      --precisions[i] = (b==0 and 1 or a/b)
+      precisions[i] = (b==0 and 1 or a/b)
 
       --print("a " .. a .. " b " .. b .. " P " .. precisions[i] .. " fp " .. precision_recall[i].falsepos)
 
@@ -490,16 +490,16 @@ function test(network, data, params)
    local a = _truepos
    local b = _totalpos
    --print("a " .. a .. " b " .. b)
-   local micro_R = (a==0 and b==0 and 0 or a/b)
+   --local micro_R = (a==0 and b==0 and 0 or a/b)
    --local micro_R = a/b
-   --local micro_R = (b==0 and 1 or a/b) 
+   local micro_R = (b==0 and 1 or a/b) 
    
    local a = _truepos
    local b = _truepos + _falsepos
    --print("a " .. a .. " b " .. b)
-   local micro_P = (a==0 and b==0 and 0 or a/b)
+   --local micro_P = (a==0 and b==0 and 0 or a/b)
    --local micro_P = a/b
-   --local micro_P = (b==0 and 1 or a/b)
+   local micro_P = (b==0 and 1 or a/b)
    
    local micro_f1score = (2 * micro_R * micro_P) / (micro_R + micro_P)
    micro_f1score = micro_f1score==micro_f1score and micro_f1score or 0
