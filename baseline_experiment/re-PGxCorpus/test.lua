@@ -442,7 +442,9 @@ function test(network, data, params)
       --print(data.relationhash[i])
       local a = precision_recall[i].truepos
       local b = precision_recall[i].totalpos
-      recalls[i] = (b==0 and 1 or a/b)
+      recalls[i] = (a==0 and b==0 and 0 or a/b)
+      --recalls[i] = (b==0 and 1 or a/b)
+
       --print("a " .. a .. " b " .. b .. " R " .. recalls[i])
       local a = precision_recall[i].truepos
       local b = precision_recall[i].truepos + precision_recall[i].falsepos
