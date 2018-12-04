@@ -36,14 +36,6 @@ function repair(e1)
    return e1
 end
 
-
-function softmatch(pred, gold)
-   local start_g = gold[3]
-   local start_p = pred[3]
-   local end_g = gold[3]+gold[1]-1
-   local end_p = pred[3]+pred[1]-1
-   return (start_p>=start_g and start_p<=end_g) or (end_p>=start_g and end_p<=end_g)
-end
    
 function lbl2chunks(lbl)
    local posw = 1
@@ -145,6 +137,12 @@ function path2lbl(path, params, data, hash)
    return tab
 end
 
+function fill_tab_entities(tab_entities, pred, target)
+   print(tab_entities)
+   print(pred)
+   print(target)
+end
+   
 function path2lblbioes(path, params, data, hash)
    --print(data.chunkhash)
    local tab = {}
@@ -184,14 +182,29 @@ end
 hierarchy_ent["Genomic_factor"]["Gene_or_protein"] = true
 hierarchy_ent["Genomic_factor"]["Genomic_variation"] = true
 hierarchy_ent["Genomic_factor"]["Haplotype"] = true
-hierarchy_ent["Genomic_factor"]["Variant"] = true
+hierarchy_ent["Genomic_factor"]["Limited_variation"] = true
 
 hierarchy_ent["Genomic_variation"]["Haplotype"] = true
-hierarchy_ent["Genomic_variation"]["Variant"] = true
+hierarchy_ent["Genomic_variation"]["Limited_variation"] = true
 
 hierarchy_ent["Phenotype"]["Pharmacokinetic_phenotype"] = true
 hierarchy_ent["Phenotype"]["Pharmacodynamic_phenotype"] = true
 hierarchy_ent["Phenotype"]["Disease"] = true
+
+
+
+local back_hierarchy_ent = {}
+back_hierarchy_ent["Haplotype"] = "Genomic_variation"
+back_hierarchy_ent["Limited_variation"] = "Genomic_variation"
+
+back_hierarchy_ent["Genomic_variation"] = "Genomic_factor"
+back_hierarchy_ent["Gene_or_protein"] = "Genomic_factor"
+
+back_hierarchy_ent["Pharmacokinetic_phenotype"] = "phenotype"
+back_hierarchy_ent["Pharmacodynamic_phenotype"] = "phenotype"
+back_hierarchy_ent["Disease"] = "phenotype"
+
+
 
 function equal_ent(ent1, ent2, consider_hierarchy)
    if consider_hierarchy then
@@ -208,6 +221,8 @@ local input_pubtator = torch.Tensor()
 
 
 function test(networks, tagger, params, data, corpus)
+   
+   local confusion_matrix = torch.Tensor(#data.relationhash, #data.relationhash):fill(0)
 
    --initializing result tables (one per entity type)
    local tab_entities = {}
@@ -423,10 +438,7 @@ function test(networks, tagger, params, data, corpus)
        	       if equal_ent(entities_found[i][2],entities_gold[j][2], params.hierarchy) and
 	       match2(entities_found[i][1], entities_gold[j][1]) then
        		  if entities_found[i].asso then table.insert(entities_found[i].asso, j) else entities_found[i].asso = {j} end
-       	       end
-	       -- if softmatch(entities_found[i], entities_gold[j]) then --different tag
-	       
-       	       -- end
+       	       end	       
        	    else
        	       if equal_ent(entities_found[i][2],entities_gold[j][2], params.hierarchy) and
 	       match(entities_found[i][1], entities_gold[j][1]) then
@@ -484,6 +496,7 @@ function test(networks, tagger, params, data, corpus)
       for i=1,#entities_found do
 	 if entities_found[i].match then
 	    tab_entities[ entities_found[i].match[2] ].ent_tp = tab_entities[ entities_found[i].match[2] ].ent_tp + 1
+	    fill_tab_entities(tab_entities, entities_found[i][2], entities_found[i].match[2])
 	 else
 	    tab_entities[ entities_found[i][2] ].ent_fp = tab_entities[ entities_found[i][2] ].ent_fp + 1 
 	 end
@@ -493,6 +506,7 @@ function test(networks, tagger, params, data, corpus)
       for j=1,#entities_gold do
 	 tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
       end
+
       
       if params.brat then
       	 local fwords = io.open("gold/" .. data.names[idx] .. ".txt", "w")

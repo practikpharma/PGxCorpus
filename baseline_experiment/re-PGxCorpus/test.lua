@@ -12,7 +12,6 @@ hierarchy_rel["influences"]["causes"] = true
 hierarchy_rel["influences"]["decreases"] = true
 hierarchy_rel["influences"]["increases"] = true
 hierarchy_rel["isAssociatedWith"]["isAssociatedWith"]=true
-hierarchy_rel["isAssociatedWith"]["isExplainedBy"]=true
 hierarchy_rel["isAssociatedWith"]["treats"]=true
 hierarchy_rel["isAssociatedWith"]["influences"]=true
 hierarchy_rel["isAssociatedWith"]["increases"]=true
@@ -21,10 +20,10 @@ hierarchy_rel["isAssociatedWith"]["causes"]=true
 
 
 local back_hierarchy_rel = {}
+back_hierarchy_rel["treats"] = "isAssociatedWith"
 back_hierarchy_rel["influences"] = "isAssociatedWith"
 back_hierarchy_rel["decreases"] = "influences"
 back_hierarchy_rel["increases"] = "influences"
-back_hierarchy_rel["treats"] = "isAssociatedWith"
 back_hierarchy_rel["causes"] = "influences"
 back_hierarchy_rel["isAssociatedWith"] = nil
 back_hierarchy_rel["isEquivalentTo"] = nil
