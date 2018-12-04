@@ -18,7 +18,6 @@ tar xvf PGxCorpus.tar
 
 cd ../..	
 
-
 ### Running the experiment
 
 th train.lua 

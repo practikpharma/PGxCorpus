@@ -321,13 +321,13 @@ function _load_entity_indices(ents, starts, ends)
    end
 end
 
-local function load_entity_indices(entities, words, starts, ends, wordhash)
+local function load_entity_indices(entities, words, starts, ends, wordhash, names)
    assert(#entities==#words.idx and #entities==#starts and #entities==#ends, #entities .. " " .. #words.idx .. " " .. #starts .. " " .. #ends)
 
    for i=1,#entities do
+      --printw(words[i], wordhash)
       _load_entity_indices(entities[i], starts[i], ends[i])
-   end
-   
+   end   
 end
 
 
@@ -876,7 +876,7 @@ function createdata(params)
    --print(names)
    
    local entities = loadentities(pathdata, ".ann",  params, entityhash)
-   load_entity_indices(entities, words, starts, ends, wordhash)
+   load_entity_indices(entities, words, starts, ends, wordhash, names)
 
    loaddag(entities)
 

@@ -41,8 +41,7 @@ print(cmd)
 
 
 local data, vdata, tdata
-local tab_rel = {"isAssociatedWith", "isExplainedBy", "treats", "transports", "influences", "increases", "decreases", "causes", "metabolizes", "isEquivalentTo", "relation"}
-
+local tab_rel = {"isAssociatedWith", "influences", "causes", "increases", "decreases", "treats", "isEquivalentTo"}
 
 local tab_res = {}
 for i=1,#tab_rel do

@@ -6,5 +6,3 @@ decreases
 treats
 causes
 increases
-metabolizes
-transports

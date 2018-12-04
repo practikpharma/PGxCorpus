@@ -1,8 +1,7 @@
 local inputwords = torch.Tensor()
 local inputentities = torch.Tensor()
-
    
-local tab_rel = {"isAssociatedWith", "isExplainedBy", "treats", "transports", "influences", "increases", "decreases", "causes", "metabolizes", "isEquivalentTo", "relation"}
+local tab_rel = {"isAssociatedWith", "influences", "causes", "increases", "decreases", "treats", "isEquivalentTo"}
 local hierarchy_rel = {}
 for i=1,#tab_rel do
    hierarchy_rel[tab_rel[i]] = {}
@@ -12,25 +11,19 @@ hierarchy_rel["influences"]["influences"] = true
 hierarchy_rel["influences"]["causes"] = true
 hierarchy_rel["influences"]["decreases"] = true
 hierarchy_rel["influences"]["increases"] = true
-hierarchy_rel["influences"]["metabolizes"] = true
-hierarchy_rel["influences"]["transports"] = true
 hierarchy_rel["isAssociatedWith"]["isAssociatedWith"]=true
 hierarchy_rel["isAssociatedWith"]["isExplainedBy"]=true
 hierarchy_rel["isAssociatedWith"]["treats"]=true
-hierarchy_rel["isAssociatedWith"]["transports"]=true
 hierarchy_rel["isAssociatedWith"]["influences"]=true
 hierarchy_rel["isAssociatedWith"]["increases"]=true
 hierarchy_rel["isAssociatedWith"]["decreases"]=true
 hierarchy_rel["isAssociatedWith"]["causes"]=true
-hierarchy_rel["isAssociatedWith"]["metabolizes"]=true
 
 
 local back_hierarchy_rel = {}
 back_hierarchy_rel["influences"] = "isAssociatedWith"
 back_hierarchy_rel["decreases"] = "influences"
 back_hierarchy_rel["increases"] = "influences"
-back_hierarchy_rel["metabolizes"] = "influences"
-back_hierarchy_rel["transports"] = "influences"
 back_hierarchy_rel["treats"] = "isAssociatedWith"
 back_hierarchy_rel["causes"] = "influences"
 back_hierarchy_rel["isAssociatedWith"] = nil
