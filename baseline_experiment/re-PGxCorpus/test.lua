@@ -8,12 +8,12 @@ for i=1,#tab_rel do
    hierarchy_rel[tab_rel[i]] = {}
    hierarchy_rel[tab_rel[i]][tab_rel[i]] = true
 end
-
-
+hierarchy_rel["influences"]["influences"] = true
 hierarchy_rel["influences"]["causes"] = true
 hierarchy_rel["influences"]["decreases"] = true
 hierarchy_rel["influences"]["increases"] = true
 hierarchy_rel["influences"]["metabolizes"] = true
+hierarchy_rel["influences"]["transports"] = true
 hierarchy_rel["isAssociatedWith"]["isAssociatedWith"]=true
 hierarchy_rel["isAssociatedWith"]["isExplainedBy"]=true
 hierarchy_rel["isAssociatedWith"]["treats"]=true
@@ -24,6 +24,19 @@ hierarchy_rel["isAssociatedWith"]["decreases"]=true
 hierarchy_rel["isAssociatedWith"]["causes"]=true
 hierarchy_rel["isAssociatedWith"]["metabolizes"]=true
 
+
+local back_hierarchy_rel = {}
+back_hierarchy_rel["influences"] = "isAssociatedWith"
+back_hierarchy_rel["decreases"] = "influences"
+back_hierarchy_rel["increases"] = "influences"
+back_hierarchy_rel["metabolizes"] = "influences"
+back_hierarchy_rel["transports"] = "influences"
+back_hierarchy_rel["treats"] = "isAssociatedWith"
+back_hierarchy_rel["causes"] = "influences"
+back_hierarchy_rel["isAssociatedWith"] = nil
+back_hierarchy_rel["isEquivalentTo"] = nil
+
+
 function equal_rel(target, prediction, hierarchy)
    if hierarchy then
       return target==prediction or ((hierarchy_rel[prediction] and hierarchy_rel[prediction][target]) or (hierarchy_rel[target] and hierarchy_rel[target][prediction]))
@@ -31,6 +44,7 @@ function equal_rel(target, prediction, hierarchy)
       return target==prediction
    end
 end
+
 
 function _forward(data, idx, ent1, ent2, network, criterion, params)
    local words = data.words[idx]
@@ -63,6 +77,81 @@ function _forward(data, idx, ent1, ent2, network, criterion, params)
    return cost, output
 end
 
+function _confusion_matrix2(data, params, confusion_matrix, target, prediction)
+   if params.hierarchy then
+      -- print("==================================")
+      -- print("caution: changer hierarchy")
+      -- print("target " .. target)
+      -- print("prediction " .. prediction)
+      local target_indice = data.relationhash[target]
+      local prediction_indice = data.relationhash[prediction]
+      
+      if target~="null" and hierarchy_rel[target][prediction] then
+	 --print("the prediction (" .. prediction .. ") is more specific than the target (" .. target .. ")")
+	 local current = prediction
+	 while current~=target do
+	    --print(current .. " is a false positive")
+	    local current_indice = data.relationhash[current]
+	    confusion_matrix[ data.relationhash["null"] ][current_indice] = confusion_matrix[ data.relationhash["null"] ][current_indice] + 1 
+	    current = back_hierarchy_rel[current]
+	 end
+	 while current do
+	    --print(current .. " is a true positive")
+	    local current_indice = data.relationhash[current]
+	    confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1 
+	    current = back_hierarchy_rel[current]
+	 end
+      elseif prediction~="null" and hierarchy_rel[prediction][target] then
+	 --print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")")
+	 local current = target
+	 local current_indice = data.relationhash[current]
+	 while current~=prediction do
+	    --print(current .. " is a false negative")
+	    confusion_matrix[current_indice][ data.relationhash["null"] ] = confusion_matrix[current_indice][ data.relationhash["null"] ] + 1 
+	    current = back_hierarchy_rel[current]
+	 end
+	 while current do
+	    --print(current .. " is a true positive")
+	    local current_indice = data.relationhash[current]
+	    confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1 
+	    current = back_hierarchy_rel[current]
+	 end
+      else
+	 local target_ancestors = {}
+	 local current = target
+	 while current do
+	    target_ancestors[current]=true
+	    current = back_hierarchy_rel[current]
+	 end
+	 local current = prediction
+	 while current do
+	    if target_ancestors[current] then
+	       --print(current .. " is a true positive")
+	       local current_indice = data.relationhash[current]
+	       confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1 
+	    else
+	       --print(current .. " is a false positive")
+	       local current_indice = data.relationhash[current]
+	       confusion_matrix[ target_indice ][current_indice] = confusion_matrix[ target_indice ][current_indice] + 1 
+	    end
+	    current = back_hierarchy_rel[current]
+	 end
+	 
+      end
+
+      --print_confusion_matrix(data, confusion_matrix)
+   else
+      
+   end
+end
+
+-- _confusion_matrix2(nil, {hierarchy=true}, torch.Tensor({10,10}), "decreases", "influences")
+-- _confusion_matrix2(nil, {hierarchy=true}, torch.Tensor({10,10}), "influences", "decreases")
+-- _confusion_matrix2(nil, {hierarchy=true}, torch.Tensor({10,10}), "decreases", "increases")
+-- _confusion_matrix2(nil, {hierarchy=true}, torch.Tensor({10,10}), "isEquivalentTo", "increases")
+-- _confusion_matrix2(nil, {hierarchy=true}, torch.Tensor({10,10}),  "increases", "isEquivalentTo")
+-- exit()
+
 function _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice)
    --if data.relationhash[class]=="int" then io.read() end
    precision_recall[class].totalpos = precision_recall[class].totalpos +1
@@ -80,7 +169,68 @@ function _confusion_matrix(data, params, precision_recall, confusion_matrix, cla
       confusion_matrix[class][indice] = confusion_matrix[class][indice] + 1
    end
 end
+
+function print_confusion_matrix(data, confusion_matrix)
+   for i=1,#data.relationhash do
+      for j=1,confusion_matrix[i]:size(1) do
+	 io.write(confusion_matrix[i][j] .. "\t")
+      end
+      io.write(data.relationhash[i] .. " " .. confusion_matrix[i]:sum())
+      io.write("\n")
+   end
+   --print(confusion_matrix)
+
+   for i=2,#data.relationhash do
+      local r = confusion_matrix[i]:sum()==0 and 1 or confusion_matrix[i][i]/confusion_matrix[i]:sum()
+      local p = confusion_matrix:narrow(2,i,1):sum()==0 and 1 or confusion_matrix[i][i]/ confusion_matrix:narrow(2,i,1):sum()
+      print(data.relationhash[i] .. " p " .. p .. " r " .. r)
+   end
+end
+
+function compute_micro_macro(data, confusion_matrix, class_to_consider)
+   local recalls, precisions = {}, {}
+   local macro_R, macro_P = 0, 0
+   for k,i in pairs(class_to_consider) do
+      recalls[i] = confusion_matrix[i]:sum()==0 and 1 or confusion_matrix[i][i]/confusion_matrix[i]:sum()
+      precisions[i] = confusion_matrix:narrow(2,i,1):sum()==0 and 1 or confusion_matrix[i][i]/ confusion_matrix:narrow(2,i,1):sum()
+      
+      macro_R = macro_R + recalls[i]
+      macro_P = macro_P + precisions[i]
+   end
+   macro_R = macro_R / (#class_to_consider)
+   macro_P = macro_P / (#class_to_consider)
+
+   local macro_f1score = (2 * macro_R * macro_P) / (macro_R + macro_P)
+   macro_f1score = macro_f1score==macro_f1score and macro_f1score or 0
+
+
+
+   local true_positives, total_positives, false_positives = 0,0,0
+   for k,i in pairs(class_to_consider) do
+      true_positives = true_positives + confusion_matrix[i][i]
+      total_positives = total_positives + confusion_matrix[i]:sum()
+      false_positives = false_positives + confusion_matrix:narrow(2,i,1):sum() - confusion_matrix[i][i]
+   end
+   micro_R = true_positives / total_positives
+   micro_P = true_positives / (true_positives + false_positives) 
+   micro_f1score = (2 * micro_R * micro_P) / (micro_R + micro_P)
    
+
+   
+   local tab_return = {}
+   for k,i in pairs(class_to_consider) do
+      --print(data.relationhash[i])
+      tab_return[ data.relationhash[i] ] = {precision = precisions[i], recall = recalls[i], f1 = (2*precisions[i]*recalls[i])/(precisions[i]+recalls[i]) }
+      tab_return[ data.relationhash[i] ].precision = tab_return[ data.relationhash[i] ].precision==tab_return[ data.relationhash[i] ].precision and tab_return[ data.relationhash[i] ].precision or 0
+      tab_return[ data.relationhash[i] ].recall = tab_return[ data.relationhash[i] ].recall==tab_return[ data.relationhash[i] ].recall and tab_return[ data.relationhash[i] ].recall or 0
+      tab_return[ data.relationhash[i] ].f1 = tab_return[ data.relationhash[i] ].f1==tab_return[ data.relationhash[i] ].f1 and tab_return[ data.relationhash[i] ].f1 or 0
+   end
+   tab_return["macro_avg"] = {precision=macro_P or 0, recall=macro_R or 0, f1=macro_f1score}
+   tab_return["micro_avg"] = {precision=micro_P or 0, recall=micro_R or 0, f1=micro_f1score}
+   
+   return tab_return
+end
+
 function test(network, data, params)
    
    local timer = torch.Timer()
@@ -105,6 +255,7 @@ function test(network, data, params)
    local toto = {0,0,0,0,0}
    
    local confusion_matrix = torch.Tensor(#data.relationhash, #data.relationhash):fill(0)
+   local confusion_matrix2 = torch.Tensor(#data.relationhash, #data.relationhash):fill(0)
    
    local precision_recall = {}
    for i=1,#data.relationhash do
@@ -151,7 +302,6 @@ function test(network, data, params)
 		  indice_2 = indice_2[1]
 		  max_2 = max_2[1]
 
-
 		  if true then --new version
 		     if params.hierarchy then
 			local class = data.relations:isrelated(idx, ent1, ent2)
@@ -159,28 +309,30 @@ function test(network, data, params)
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
 			      --since isAssociatedWith is undirected, only one true positive isAssociatedWith is counted
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			      --print("toto1")
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			      toto[1] = toto[1]+1
 			   elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
 			      --relation in both direction. Since isAssociatedWith is undirected, both can be correct 
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 			   elseif indice_1~=data.relationhash["null"] then --only one relation between ent1 and ent2 
-			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      --we do not penalize the model for not finding the isAssociated in the other direction
 			      --since it is undirected
-			      --print("toto2")
+			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			      toto[2] = toto[2]+1
 			   elseif indice_2~=data.relationhash["null"] then --only one relation between ent2 and ent1 
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
-			      --print("toto3")
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 			      toto[3] = toto[3]+1
 			      --same comment as the one above
-			   else
+			   else --both prediction are "null"
+			      --we only penalythe the model once for not finding isAssociatedWith (since it is undirected)
 			      local class = data.relations:isrelated(idx, ent1, ent2)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			      local class = data.relations:isrelated(idx, ent2, ent1)
-			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			   end
 			else --gold is not isAssociatedWith
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
@@ -189,21 +341,24 @@ function test(network, data, params)
 			      local class2 = data.relations:isrelated(idx, ent2, ent1)
 			      local class = class1~=data.relationhash["null"] and class1 or class2
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			      --print("toto5")
-			      --toto[5] = toto[5]+1
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			   elseif indice_1~=data.relationhash["null"] and indice_2~=data.relationhash["null"] then
 			      --relation in both direction. Let's choose the best scoring one (the other one is set to "null").
 			      if max_1>max_2 then indice_2 = data.relationhash["null"]
 			      else indice_1 = data.relationhash["null"] end
 			      local class = data.relations:isrelated(idx, ent1, ent2)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			      local class = data.relations:isrelated(idx, ent2, ent1)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 			   else
 			      local class = data.relations:isrelated(idx, ent1, ent2)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			      local class = data.relations:isrelated(idx, ent2, ent1)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 			   end
 			end
 		     else --no hierarchy
@@ -215,6 +370,12 @@ function test(network, data, params)
 		     _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 		     local class = data.relations:isrelated(idx, ent2, ent1)
 		     _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
+
+		     local class = data.relations:isrelated(idx, ent1, ent2)
+		     _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
+		     local class = data.relations:isrelated(idx, ent2, ent1)
+		     _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
+		     
 		     if params.brat then
 			if indice_1~=data.relationhash["null"] then
 			   if not relations_predicted[ent1] then
@@ -401,29 +562,6 @@ function test(network, data, params)
 
    print("nb toto " .. toto[1] .. " + " .. toto[2] .. " + " .. toto[3] .. " + " .. toto[4] .. " + " .. toto[5] .. " = " .. toto[1]+toto[2]+toto[3]+toto[4]+toto[5] )
 
-   
-   print(data.relationhash)
-   
-   for i=1,#data.relationhash do
-      for j=1,confusion_matrix[i]:size(1) do
-	 io.write(confusion_matrix[i][j] .. "\t")
-      end
-      io.write(data.relationhash[i] .. " " .. confusion_matrix[i]:sum())
-      io.write("\n")
-   end
-   --print(confusion_matrix)
-
-   for i=2,#data.relationhash do
-      local r = confusion_matrix[i]:sum()==0 and 1 or confusion_matrix[i][i]/confusion_matrix[i]:sum()
-      local p = confusion_matrix:narrow(2,i,1):sum()==0 and 1 or confusion_matrix[i][i]/ confusion_matrix:narrow(2,i,1):sum()
-      print(data.relationhash[i] .. " p " .. p .. " r " .. r)
-   end
-   
-   local t = timer:time().real
-   print(string.format('test corpus processed in %.2f seconds (%.2f sentences/s)', t, data.size/t))
-
-   
-   cost = cost/nforward
 
    local class_to_consider = {}
    if params.onerelation then
@@ -434,76 +572,94 @@ function test(network, data, params)
       end
    end
    
-   --computing evaluation measures
-   --macro-average (avg r and p over all categories)
-   local recalls, precisions = {}, {}
-   local macro_R, macro_P = 0, 0
-   local nb_recall, nb_precision = 0,0
-   for k,i in pairs(class_to_consider) do
-      --print(data.relationhash[i])
-      local a = precision_recall[i].truepos
-      local b = precision_recall[i].totalpos
+   print(data.relationhash)
 
-      --recalls[i] = (a==0 and b==0 and 0 or a/b)
-      --recalls[i] = a/b
-      recalls[i] = (b==0 and 1 or a/b)
+   print("confusion_matrix2")
+   print_confusion_matrix(data, confusion_matrix2)
+   local tab_return = compute_micro_macro(data, confusion_matrix2, class_to_consider)
+   print("Macro " .. tab_return.macro_avg.precision .. " " .. tab_return.macro_avg.recall .. " " .. tab_return.macro_avg.f1)
+   print("Micro " .. tab_return.micro_avg.precision .. " " .. tab_return.micro_avg.recall .. " " .. tab_return.micro_avg.f1)
+   print("\n\n")
 
-      --print("a " .. a .. " b " .. b .. " R " .. recalls[i])
-      local a = precision_recall[i].truepos
-      local b = precision_recall[i].truepos + precision_recall[i].falsepos
+   
+   local t = timer:time().real
+   print(string.format('test corpus processed in %.2f seconds (%.2f sentences/s)', t, data.size/t))
+   
+   cost = cost/nforward
+   
 
-      --precisions[i] = (a==0 and b==0 and 0 or a/b)
-      --precisions[i] = a/b
-      precisions[i] = (b==0 and 1 or a/b)
-
-      --print("a " .. a .. " b " .. b .. " P " .. precisions[i] .. " fp " .. precision_recall[i].falsepos)
-
-      -- if recalls[i]==recalls[i] then
-      -- 	 macro_R = macro_R + recalls[i] 
-      -- 	 nb_recall = nb_recall + 1
-      -- else
-      -- 	 --macro_R = macro_R + 0; nb_recall = nb_recall + 1
-      -- end
-      -- if precisions[i]==precisions[i] then
-      -- 	 macro_P = macro_P + precisions[i] 
-      -- 	 nb_precision = nb_precision + 1
-      -- else
-      -- 	 --macro_P = macro_P + 0; nb_precision = nb_precision + 1
-      -- end
-      macro_R = macro_R + ((recalls[i]==recalls[i]) and recalls[i] or 0)
-      macro_P = macro_P + ((precisions[i]==precisions[i]) and precisions[i] or 0)
+   if false then
+      --computing evaluation measures
+      --macro-average (avg r and p over all categories)
+      local recalls, precisions = {}, {}
+      local macro_R, macro_P = 0, 0
+      local nb_recall, nb_precision = 0,0
+      for k,i in pairs(class_to_consider) do
+	 --print(data.relationhash[i])
+	 local a = precision_recall[i].truepos
+	 local b = precision_recall[i].totalpos
+	 
+	 --recalls[i] = (a==0 and b==0 and 0 or a/b)
+	 --recalls[i] = a/b
+	 recalls[i] = (b==0 and 1 or a/b)
+	 
+	 --print("a " .. a .. " b " .. b .. " R " .. recalls[i])
+	 local a = precision_recall[i].truepos
+	 local b = precision_recall[i].truepos + precision_recall[i].falsepos
+	 
+	 --precisions[i] = (a==0 and b==0 and 0 or a/b)
+	 --precisions[i] = a/b
+	 precisions[i] = (b==0 and 1 or a/b)
+	 
+	 --print("a " .. a .. " b " .. b .. " P " .. precisions[i] .. " fp " .. precision_recall[i].falsepos)
+	 
+	 -- if recalls[i]==recalls[i] then
+	 -- 	 macro_R = macro_R + recalls[i] 
+	 -- 	 nb_recall = nb_recall + 1
+	 -- else
+	 -- 	 --macro_R = macro_R + 0; nb_recall = nb_recall + 1
+	 -- end
+	 -- if precisions[i]==precisions[i] then
+	 -- 	 macro_P = macro_P + precisions[i] 
+	 -- 	 nb_precision = nb_precision + 1
+	 -- else
+	 -- 	 --macro_P = macro_P + 0; nb_precision = nb_precision + 1
+	 -- end
+	 macro_R = macro_R + ((recalls[i]==recalls[i]) and recalls[i] or 0)
+	 macro_P = macro_P + ((precisions[i]==precisions[i]) and precisions[i] or 0)
+      end
+      --macro_R = macro_R/nb_recall
+      --macro_P = macro_P/nb_precision
+      macro_R = macro_R / (#class_to_consider)
+      macro_P = macro_P / (#class_to_consider)
+      local macro_f1score = (2 * macro_R * macro_P) / (macro_R + macro_P)
+      macro_f1score = macro_f1score==macro_f1score and macro_f1score or 0
+      
+      --micro average precision (sum truepos, falsepos, totalpos and compute P and R)
+      local _truepos, _falsepos, _totalpos = 0, 0, 0
+      for k,i in pairs(class_to_consider) do
+	 _truepos = _truepos + precision_recall[i].truepos
+	 _totalpos = _totalpos + precision_recall[i].totalpos
+	 _falsepos = _falsepos + precision_recall[i].falsepos
+      end
+      local a = _truepos
+      local b = _totalpos
+      --print("a " .. a .. " b " .. b)
+      --local micro_R = (a==0 and b==0 and 0 or a/b)
+      --local micro_R = a/b
+      local micro_R = (b==0 and 1 or a/b) 
+   
+      local a = _truepos
+      local b = _truepos + _falsepos
+      --print("a " .. a .. " b " .. b)
+      --local micro_P = (a==0 and b==0 and 0 or a/b)
+      --local micro_P = a/b
+      local micro_P = (b==0 and 1 or a/b)
+      
+      local micro_f1score = (2 * micro_R * micro_P) / (micro_R + micro_P)
+      micro_f1score = micro_f1score==micro_f1score and micro_f1score or 0
    end
-   --macro_R = macro_R/nb_recall
-   --macro_P = macro_P/nb_precision
-   macro_R = macro_R / (#class_to_consider)
-   macro_P = macro_P / (#class_to_consider)
-   local macro_f1score = (2 * macro_R * macro_P) / (macro_R + macro_P)
-   macro_f1score = macro_f1score==macro_f1score and macro_f1score or 0
-   
-   --micro average precision (sum truepos, falsepos, totalpos and compute P and R)
-   local _truepos, _falsepos, _totalpos = 0, 0, 0
-   for k,i in pairs(class_to_consider) do
-      _truepos = _truepos + precision_recall[i].truepos
-      _totalpos = _totalpos + precision_recall[i].totalpos
-      _falsepos = _falsepos + precision_recall[i].falsepos
-   end
-   local a = _truepos
-   local b = _totalpos
-   --print("a " .. a .. " b " .. b)
-   --local micro_R = (a==0 and b==0 and 0 or a/b)
-   --local micro_R = a/b
-   local micro_R = (b==0 and 1 or a/b) 
-   
-   local a = _truepos
-   local b = _truepos + _falsepos
-   --print("a " .. a .. " b " .. b)
-   --local micro_P = (a==0 and b==0 and 0 or a/b)
-   --local micro_P = a/b
-   local micro_P = (b==0 and 1 or a/b)
-   
-   local micro_f1score = (2 * micro_R * micro_P) / (micro_R + micro_P)
-   micro_f1score = micro_f1score==micro_f1score and micro_f1score or 0
-   
+
    --print(data.relationhash)
    print("\t\tP\tR")
    table.sort(class_to_consider, function(a,b) return a<b end) 
@@ -511,23 +667,15 @@ function test(network, data, params)
    --for k,i in pairs(class_to_consider) do
    for j=1,#class_to_consider do
       local i = class_to_consider[j]
-      print("Class " .. i .. ":\t" .. string.format('%.2f',precisions[i]) .. "\t" .. string.format('%.2f',recalls[i]) .. " " .. data.relationhash[i])
+      local rel = data.relationhash[i]
+      print("Class " .. i .. ":\t" .. string.format('%.2f',tab_return[rel].precision) .. "\t" .. string.format('%.2f',tab_return[rel].recall) .. " " .. data.relationhash[i])
    end
    
-   local tab_return = {}
-   for k,i in pairs(class_to_consider) do
-      --print(data.relationhash[i])
-      tab_return[ data.relationhash[i] ] = {precision = precisions[i], recall = recalls[i], f1 = (2*precisions[i]*recalls[i])/(precisions[i]+recalls[i]) }
-      tab_return[ data.relationhash[i] ].precision = tab_return[ data.relationhash[i] ].precision==tab_return[ data.relationhash[i] ].precision and tab_return[ data.relationhash[i] ].precision or 0
-      tab_return[ data.relationhash[i] ].recall = tab_return[ data.relationhash[i] ].recall==tab_return[ data.relationhash[i] ].recall and tab_return[ data.relationhash[i] ].recall or 0
-      tab_return[ data.relationhash[i] ].f1 = tab_return[ data.relationhash[i] ].f1==tab_return[ data.relationhash[i] ].f1 and tab_return[ data.relationhash[i] ].f1 or 0
-   end
-   tab_return["macro_avg"] = {precision=macro_P or 0, recall=macro_R or 0, f1=macro_f1score or 0}
-   tab_return["micro_avg"] = {precision=micro_P or 0, recall=micro_R or 0, f1=micro_f1score or 0}
+
    tab_return.cost = cost
    
-   print(tab_return["influences"])
-   print(precision_recall[data.relationhash["influences"]])
+   -- print(tab_return["influences"])
+   -- print(precision_recall[data.relationhash["influences"]])
    
    --return (macro_P or 0), (macro_R or 0), (macro_f1score or 0), cost, micro_P, micro_R, micro_f1score
    return tab_return
