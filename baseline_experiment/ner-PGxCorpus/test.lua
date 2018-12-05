@@ -700,9 +700,7 @@ function test(networks, tagger, params, data, corpus)
 
    local tab_return = compute_prf1(tab_entities, tab_ent)
    local tab_return2 = compute_prf1_2(tab_entities2, tab_ent)
-   print(tab_return)
-   print(tab_return2)
-
+   tab_return = tab_return2
    
    -- totals[totals:size(1)]=total_p
    
