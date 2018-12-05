@@ -137,11 +137,6 @@ function path2lbl(path, params, data, hash)
    return tab
 end
 
-function fill_tab_entities(tab_entities, pred, target)
-   print(tab_entities)
-   print(pred)
-   print(target)
-end
    
 function path2lblbioes(path, params, data, hash)
    --print(data.chunkhash)
@@ -173,6 +168,99 @@ function path2lblbioes(path, params, data, hash)
    return tab
 end
 
+function compute_prf1(tab_entities, tab_ent)
+   local tab_return = {}
+   local avg_p, avg_r = 0,0 --for macro average f1
+   for i=1, #tab_ent do
+      local k = tab_ent[i]
+      local v = tab_entities[k]
+      
+      -- print("\n%=========================================================================")
+      -- print("%==================== " .. k .. " ============================")
+      -- print("%=========================================================================")
+      -- print(v.ent_total)
+      -- print(v.ent_tp)
+      -- print(v.ent_fp)
+      
+      local tpfp = v.ent_tp + v.ent_fp
+      local precision = v.ent_tp / tpfp
+      
+      -- print("============Precision==============")
+      -- print(precision)
+	 
+      local recall = v.ent_tp / v.ent_total
+      
+      -- print("============Recall==============")
+      -- print(recall)
+      
+      local prod = precision * recall
+      local add = precision + recall
+      local f1 = (2*prod) / add
+      
+      -- print("============F1==============")
+      -- print(f1)
+	 
+      tab_return[k] = {precision=precision, recall=recall, f1=f1, ent_total=v.ent_total, ent_tp=v.ent_tp, ent_fp=v.ent_fp}
+
+      avg_p = avg_p + (precision==precision and precision or 0)
+      avg_r = avg_r + (recall==recall and recall or 0)
+   end
+
+   avg_p = avg_p / #tab_ent
+   avg_r = avg_r / #tab_ent
+
+   tab_return.macro_avg = {precision=avg_p, recall=avg_r, f1=(2*avg_p*avg_r)/(avg_p+avg_r)}
+   return tab_return
+end
+
+
+function compute_prf1_2(tab_entities, tab_ent)
+   local tab_return = {}
+   local avg_p, avg_r = 0,0 --for macro average f1
+   for i=1, #tab_ent do
+      local k = tab_ent[i]
+      local v = tab_entities[k]
+      
+      -- print("\n%=========================================================================")
+      -- print("%==================== " .. k .. " ============================")
+      -- print("%=========================================================================")
+      -- print(v.ent_tp)
+      -- print(v.ent_fp)
+      -- print(v.ent_fn)
+      
+      local tpfp = v.ent_tp + v.ent_fp
+      local precision = tpfp==0 and 1 or (v.ent_tp / tpfp)
+      
+      -- print("============Precision==============")
+      -- print(precision)
+
+      local tpfn = v.ent_tp + v.ent_fn
+      local recall = tpfn==0 and 1 or  (v.ent_tp / tpfn)
+      
+      -- print("============Recall==============")
+      -- print(recall)
+      
+      local prod = precision * recall
+      local add = precision + recall
+      local f1 = (2*prod) / add
+      
+      -- print("============F1==============")
+      -- print(f1)
+	 
+      tab_return[k] = {precision=precision, recall=recall, f1=f1, ent_fn=v.ent_fn, ent_tp=v.ent_tp, ent_fp=v.ent_fp}
+
+      avg_p = avg_p + (precision==precision and precision or 0)
+      avg_r = avg_r + (recall==recall and recall or 0)
+   end
+
+   avg_p = avg_p / #tab_ent
+   avg_r = avg_r / #tab_ent
+
+   tab_return.macro_avg = {precision=avg_p, recall=avg_r, f1=(2*avg_p*avg_r)/(avg_p+avg_r)}
+   return tab_return
+end
+
+
 local tab_ent = {"Chemical", "Genomic_factor", "Limited_variation", "Genomic_variation", "Gene_or_protein", "Haplotype", "Phenotype", "Disease", "Pharmacokinetic_phenotype", "Pharmacodynamic_phenotype"}
 local hierarchy_ent = {}
 for i=1,#tab_ent do
@@ -200,9 +288,9 @@ back_hierarchy_ent["Limited_variation"] = "Genomic_variation"
 back_hierarchy_ent["Genomic_variation"] = "Genomic_factor"
 back_hierarchy_ent["Gene_or_protein"] = "Genomic_factor"
 
-back_hierarchy_ent["Pharmacokinetic_phenotype"] = "phenotype"
-back_hierarchy_ent["Pharmacodynamic_phenotype"] = "phenotype"
-back_hierarchy_ent["Disease"] = "phenotype"
+back_hierarchy_ent["Pharmacokinetic_phenotype"] = "Phenotype"
+back_hierarchy_ent["Pharmacodynamic_phenotype"] = "Phenotype"
+back_hierarchy_ent["Disease"] = "Phenotype"
 
 
 
@@ -216,14 +304,77 @@ end
 
 
 
+function fill_tab_entities(params, data, tab_entities, prediction, target)
+   local verbose = false
+   if verbose then print("prediction : " .. (prediction and prediction or "nil")) end
+   if verbose then print("target : " .. (target and target or "nil")) end
+   if target and hierarchy_ent[target][prediction] then
+      if verbose then print("the prediction (" .. prediction .. ") is more specific than the target (" .. target .. ")") end
+      local current = prediction
+      while current~=target do
+	 if verbose then print(current .. " is a false positive 1") end
+	 tab_entities[current].ent_fp = tab_entities[current].ent_fp + 1 
+	 current = back_hierarchy_ent[current]
+	 end
+      while current do
+	 if verbose then print(current .. " is a true positive 2") end
+	 tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1 
+	 current = back_hierarchy_ent[current]
+      end
+   elseif prediction and hierarchy_ent[prediction][target] then
+      if verbose then print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")") end
+      local current = target
+      while current~=prediction do
+	 if verbose then print(current .. " is a false negative 3") end
+	 tab_entities[current].ent_fn = tab_entities[current].ent_fn + 1 
+	 current = back_hierarchy_ent[current]
+      end
+      while current do
+	 if verbose then print(current .. " is a true positive 4") end
+	 tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1
+	 current = back_hierarchy_ent[current]
+      end
+   else
+      local target_ancestors = {}
+      local current = target
+      while current do
+	 target_ancestors[current]=true
+	 current = back_hierarchy_ent[current]
+      end
+      local current = prediction
+      while current do
+	 if target_ancestors[current] then
+	    if verbose then print(current .. " is a true positive 5") end
+	    tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1
+	    target_ancestors[current] = false
+	 else
+	    if verbose then print(current .. " is a false positive 6") end
+	    tab_entities[current].ent_fp = tab_entities[current].ent_fp + 1
+	 end
+	 current = back_hierarchy_ent[current]
+      end
+      for k,v in pairs(target_ancestors) do
+	 if v then
+	    if verbose then print(k .. " is a false negative 7") end
+	    --confusion_matrix[k_indice][ data.relationhash["null"] ] = confusion_matrix[k_indice][ data.relationhash["null"] ] + 1
+	    tab_entities[k].ent_fn = tab_entities[k].ent_fn + 1 
+	 end
+      end
+   end
+   if verbose then print("\ntp\tfp\tfn") end
+   for k,v in pairs(tab_entities) do
+      if verbose then print(v.ent_tp .. "\t" .. v.ent_fp .. "\t" .. v.ent_fn .. "\t" .. k) end
+   end
+   if verbose then io.read() end
+   return tab_entities
+end
+
 local input_labels = torch.Tensor()
 local input_pubtator = torch.Tensor()
 
 
 function test(networks, tagger, params, data, corpus)
    
-   local confusion_matrix = torch.Tensor(#data.relationhash, #data.relationhash):fill(0)
-
    --initializing result tables (one per entity type)
    local tab_entities = {}
    for _, ent in pairs(tab_ent) do
@@ -232,9 +383,17 @@ function test(networks, tagger, params, data, corpus)
       tab_entities[ent].ent_fp = 0
       tab_entities[ent].ent_total = 0
    end
+
+   local tab_entities2 = {}
+   for _, ent in pairs(tab_ent) do
+      tab_entities2[ent] = {}
+      tab_entities2[ent].ent_tp = 0
+      tab_entities2[ent].ent_fp = 0
+      tab_entities2[ent].ent_fn = 0
+   end
+
    local avg_f1 = torch.Tensor(#tab_ent)
    
-
    if params.dropout~=0 then
       networks.dropout.train=false
    end
@@ -496,15 +655,22 @@ function test(networks, tagger, params, data, corpus)
       for i=1,#entities_found do
 	 if entities_found[i].match then
 	    tab_entities[ entities_found[i].match[2] ].ent_tp = tab_entities[ entities_found[i].match[2] ].ent_tp + 1
-	    fill_tab_entities(tab_entities, entities_found[i][2], entities_found[i].match[2])
+	    fill_tab_entities(params, data, tab_entities2, entities_found[i][2], entities_found[i].match[2])
+	    entities_found[i].match.matched = true
 	 else
 	    tab_entities[ entities_found[i][2] ].ent_fp = tab_entities[ entities_found[i][2] ].ent_fp + 1 
+	    fill_tab_entities(params, data, tab_entities2, entities_found[i][2], nil) --adding false positives
 	 end
       end
       
-      --computing target positive (tp + fn) 
+      --computing target positive (tp + fn)
       for j=1,#entities_gold do
 	 tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
+	 if entities_gold.matched then
+	    print("matched")
+	 else
+	    fill_tab_entities(params, data, tab_entities2, nil, entities_gold[j][2]) --adding false negatives
+	 end
       end
 
       
@@ -532,47 +698,11 @@ function test(networks, tagger, params, data, corpus)
       end
    end
 
-   local tab_return = {}
-   local avg_p, avg_r = 0,0 --for macro average f1
-   for i=1, #tab_ent do
-      local k = tab_ent[i]
-      local v = tab_entities[k]
-      
-      -- print("\n%=========================================================================")
-      -- print("%==================== " .. k .. " ============================")
-      -- print("%=========================================================================")
-      -- print(v.ent_total)
-      -- print(v.ent_tp)
-      -- print(v.ent_fp)
-      
-      local tpfp = v.ent_tp + v.ent_fp
-      local precision = v.ent_tp / tpfp
-      
-      -- print("============Precision==============")
-      -- print(precision)
-	 
-      local recall = v.ent_tp / v.ent_total
-      
-      -- print("============Recall==============")
-      -- print(recall)
-      
-      local prod = precision * recall
-      local add = precision + recall
-      local f1 = (2*prod) / add
-      
-      -- print("============F1==============")
-      -- print(f1)
-	 
-      tab_return[k] = {precision=precision, recall=recall, f1=f1, ent_total=v.ent_total, ent_tp=v.ent_tp, ent_fp=v.ent_fp}
+   local tab_return = compute_prf1(tab_entities, tab_ent)
+   local tab_return2 = compute_prf1_2(tab_entities2, tab_ent)
+   print(tab_return)
+   print(tab_return2)
 
-      avg_p = avg_p + (precision==precision and precision or 0)
-      avg_r = avg_r + (recall==recall and recall or 0)
-   end
-
-   avg_p = avg_p / #tab_ent
-   avg_r = avg_r / #tab_ent
-
-   tab_return.macro_avg = {precision=avg_p, recall=avg_r, f1=(2*avg_p*avg_r)/(avg_p+avg_r)}
    
    -- totals[totals:size(1)]=total_p
    

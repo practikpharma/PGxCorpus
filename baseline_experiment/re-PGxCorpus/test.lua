@@ -69,41 +69,44 @@ function _forward(data, idx, ent1, ent2, network, criterion, params)
    return cost, output
 end
 
-function _confusion_matrix2(data, params, confusion_matrix, target, prediction)
+function _confusion_matrix2(data, params, confusion_matrix, target, prediction, verbose)
+   --verbose = true
    if params.hierarchy then
-      -- print("==================================")
-      -- print("caution: changer hierarchy")
-      -- print("target " .. target)
-      -- print("prediction " .. prediction)
+      if verbose then
+	 print("==================================")
+	 print("caution: changer hierarchy")
+	 print("target " .. target)
+	 print("prediction " .. prediction)
+      end
       local target_indice = data.relationhash[target]
       local prediction_indice = data.relationhash[prediction]
       
       if target~="null" and hierarchy_rel[target][prediction] then
-	 --print("the prediction (" .. prediction .. ") is more specific than the target (" .. target .. ")")
+	 if verbose then print("the prediction (" .. prediction .. ") is more specific than the target (" .. target .. ")") end
 	 local current = prediction
 	 while current~=target do
-	    --print(current .. " is a false positive")
+	    if verbose then print(current .. " is a false positive 1") end
 	    local current_indice = data.relationhash[current]
 	    confusion_matrix[ data.relationhash["null"] ][current_indice] = confusion_matrix[ data.relationhash["null"] ][current_indice] + 1 
 	    current = back_hierarchy_rel[current]
 	 end
 	 while current do
-	    --print(current .. " is a true positive")
+	    if verbose then print(current .. " is a true positive 2") end
 	    local current_indice = data.relationhash[current]
 	    confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1 
 	    current = back_hierarchy_rel[current]
 	 end
       elseif prediction~="null" and hierarchy_rel[prediction][target] then
-	 --print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")")
+	 if verbose then print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")") end
 	 local current = target
 	 local current_indice = data.relationhash[current]
 	 while current~=prediction do
-	    --print(current .. " is a false negative")
+	    if verbose then print(current .. " is a false negative 3") end
 	    confusion_matrix[current_indice][ data.relationhash["null"] ] = confusion_matrix[current_indice][ data.relationhash["null"] ] + 1 
 	    current = back_hierarchy_rel[current]
 	 end
 	 while current do
-	    --print(current .. " is a true positive")
+	    if verbose then print(current .. " is a true positive 4") end
 	    local current_indice = data.relationhash[current]
 	    confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1 
 	    current = back_hierarchy_rel[current]
@@ -118,22 +121,27 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction)
 	 local current = prediction
 	 while current do
 	    if target_ancestors[current] then
-	       --print(current .. " is a true positive")
+	       if verbose then print(current .. " is a true positive 5") end
 	       local current_indice = data.relationhash[current]
-	       confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1 
+	       confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1
+	       target_ancestors[current] = false
 	    else
-	       --print(current .. " is a false positive")
+	       if verbose then print(current .. " is a false positive 6") end
 	       local current_indice = data.relationhash[current]
 	       confusion_matrix[ target_indice ][current_indice] = confusion_matrix[ target_indice ][current_indice] + 1 
 	    end
 	    current = back_hierarchy_rel[current]
 	 end
-	 
+	 for k,v in pairs(target_ancestors) do
+	    if v then --false negative
+	       local k_indice = data.relationhash[k]
+	       if verbose then print(k .. " is a false negative 7") end
+	       confusion_matrix[k_indice][ data.relationhash["null"] ] = confusion_matrix[k_indice][ data.relationhash["null"] ] + 1 
+	    end
+	 end
       end
-
-      --print_confusion_matrix(data, confusion_matrix)
    else
-      
+      error("to do")
    end
 end
 
