@@ -308,65 +308,81 @@ function fill_tab_entities(params, data, tab_entities, prediction, target)
    local verbose = false
    if verbose then print("prediction : " .. (prediction and prediction or "nil")) end
    if verbose then print("target : " .. (target and target or "nil")) end
-   if target and hierarchy_ent[target][prediction] then
-      if verbose then print("the prediction (" .. prediction .. ") is more specific than the target (" .. target .. ")") end
-      local current = prediction
-      while current~=target do
-	 if verbose then print(current .. " is a false positive 1") end
-	 tab_entities[current].ent_fp = tab_entities[current].ent_fp + 1 
-	 current = back_hierarchy_ent[current]
+   if params.hierarchy then
+      if target and hierarchy_ent[target][prediction] then
+	 if verbose then print("the prediction (" .. prediction .. ") is more specific than the target (" .. target .. ")") end
+	 local current = prediction
+	 while current~=target do
+	    if verbose then print(current .. " is a false positive 1") end
+	    tab_entities[current].ent_fp = tab_entities[current].ent_fp + 1 
+	    current = back_hierarchy_ent[current]
 	 end
-      while current do
-	 if verbose then print(current .. " is a true positive 2") end
-	 tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1 
-	 current = back_hierarchy_ent[current]
-      end
-   elseif prediction and hierarchy_ent[prediction][target] then
-      if verbose then print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")") end
-      local current = target
-      while current~=prediction do
-	 if verbose then print(current .. " is a false negative 3") end
-	 tab_entities[current].ent_fn = tab_entities[current].ent_fn + 1 
-	 current = back_hierarchy_ent[current]
-      end
-      while current do
-	 if verbose then print(current .. " is a true positive 4") end
-	 tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1
-	 current = back_hierarchy_ent[current]
-      end
-   else
-      local target_ancestors = {}
-      local current = target
-      while current do
-	 target_ancestors[current]=true
-	 current = back_hierarchy_ent[current]
-      end
-      local current = prediction
-      while current do
-	 if target_ancestors[current] then
-	    if verbose then print(current .. " is a true positive 5") end
+	 while current do
+	    if verbose then print(current .. " is a true positive 2") end
+	    tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1 
+	    current = back_hierarchy_ent[current]
+	 end
+      elseif prediction and hierarchy_ent[prediction][target] then
+	 if verbose then print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")") end
+	 local current = target
+	 while current~=prediction do
+	    if verbose then print(current .. " is a false negative 3") end
+	    tab_entities[current].ent_fn = tab_entities[current].ent_fn + 1 
+	    current = back_hierarchy_ent[current]
+	 end
+	 while current do
+	    if verbose then print(current .. " is a true positive 4") end
 	    tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1
-	    target_ancestors[current] = false
-	 else
-	    if verbose then print(current .. " is a false positive 6") end
-	    tab_entities[current].ent_fp = tab_entities[current].ent_fp + 1
+	    current = back_hierarchy_ent[current]
 	 end
-	 current = back_hierarchy_ent[current]
+      else
+	 local target_ancestors = {}
+	 local current = target
+	 while current do
+	    target_ancestors[current]=true
+	    current = back_hierarchy_ent[current]
+	 end
+	 local current = prediction
+	 while current do
+	    if target_ancestors[current] then
+	       if verbose then print(current .. " is a true positive 5") end
+	       tab_entities[current].ent_tp = tab_entities[current].ent_tp + 1
+	       target_ancestors[current] = false
+	    else
+	       if verbose then print(current .. " is a false positive 6") end
+	       tab_entities[current].ent_fp = tab_entities[current].ent_fp + 1
+	    end
+	    current = back_hierarchy_ent[current]
+	 end
+	 for k,v in pairs(target_ancestors) do
+	    if v then
+	       if verbose then print(k .. " is a false negative 7") end
+	       --confusion_matrix[k_indice][ data.relationhash["null"] ] = confusion_matrix[k_indice][ data.relationhash["null"] ] + 1
+	       tab_entities[k].ent_fn = tab_entities[k].ent_fn + 1 
+	    end
+	 end
       end
-      for k,v in pairs(target_ancestors) do
-	 if v then
-	    if verbose then print(k .. " is a false negative 7") end
-	    --confusion_matrix[k_indice][ data.relationhash["null"] ] = confusion_matrix[k_indice][ data.relationhash["null"] ] + 1
-	    tab_entities[k].ent_fn = tab_entities[k].ent_fn + 1 
-	 end
+      if verbose then print("\ntp\tfp\tfn") end
+      for k,v in pairs(tab_entities) do
+	 if verbose then print(v.ent_tp .. "\t" .. v.ent_fp .. "\t" .. v.ent_fn .. "\t" .. k) end
+      end
+      if verbose then io.read() end
+   else
+      if prediction==target then
+	 if verbose then print(prediction .. " is a true positive 1") end
+	 tab_entities[prediction].ent_tp = tab_entities[prediction].ent_tp + 1
+      elseif prediction==nil then
+	 if verbose then print(target .. " is a false negative 2") end
+	 tab_entities[target].ent_fn = tab_entities[target].ent_fn + 1
+      elseif target==nil then
+	 --false positive
+	 if verbose then print(prediction .. " is a false positive 6") end
+	 tab_entities[prediction].ent_fp = tab_entities[prediction].ent_fp + 1
+      else
+	 error("wtf")
       end
    end
-   if verbose then print("\ntp\tfp\tfn") end
-   for k,v in pairs(tab_entities) do
-      if verbose then print(v.ent_tp .. "\t" .. v.ent_fp .. "\t" .. v.ent_fn .. "\t" .. k) end
-   end
-   if verbose then io.read() end
-   return tab_entities
+      return tab_entities
 end
 
 local input_labels = torch.Tensor()
@@ -666,8 +682,8 @@ function test(networks, tagger, params, data, corpus)
       --computing target positive (tp + fn)
       for j=1,#entities_gold do
 	 tab_entities[ entities_gold[j][2] ].ent_total = tab_entities[ entities_gold[j][2] ].ent_total + 1
-	 if entities_gold.matched then
-	    print("matched")
+	 if entities_gold[j].matched then
+	    --print("matched")
 	 else
 	    fill_tab_entities(params, data, tab_entities2, nil, entities_gold[j][2]) --adding false negatives
 	 end
@@ -697,10 +713,11 @@ function test(networks, tagger, params, data, corpus)
 	 end
       end
    end
-
+   
    local tab_return = compute_prf1(tab_entities, tab_ent)
    local tab_return2 = compute_prf1_2(tab_entities2, tab_ent)
    tab_return = tab_return2
+   --print(tab_return)
    
    -- totals[totals:size(1)]=total_p
    
