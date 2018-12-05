@@ -159,7 +159,6 @@ if frestart then
    networks = frestart:readObject()
    tagger = frestart:readObject()
 
-   params.hierarchy = true
    local tab = testfunction(networks, tagger, params, vdata, "train")
    print("Last score:\t" .. (params.last and params.last or "nil"))
    print("Best scores:\t" .. params.best)
