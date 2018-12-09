@@ -74,7 +74,6 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
    if params.hierarchy then
       if verbose then
 	 print("==================================")
-	 print("caution: changer hierarchy")
 	 print("target " .. target)
 	 print("prediction " .. prediction)
       end
@@ -141,7 +140,17 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
 	 end
       end
    else
-      error("to do")
+      if target==prediction then
+	 confusion_matrix[data.relationhash[target]][data.relationhash[target]] = confusion_matrix[data.relationhash[target]][data.relationhash[target]] + 1
+      else
+	 -- print("error")
+	 if false then
+	    printw(words, data.wordhash)
+	    print(data.relationhash[data.relationhash[target]] .. " but classified as " .. data.relationhash[data.relationhash[prediction]]) 
+	    io.read()
+	 end
+	 confusion_matrix[data.relationhash[target]][data.relationhash[prediction]] = confusion_matrix[data.relationhash[target]][data.relationhash[prediction]] + 1
+      end
    end
 end
 
@@ -303,7 +312,7 @@ function test(network, data, params)
 		  max_2 = max_2[1]
 
 		  if true then --new version
-		     if params.hierarchy then
+		     if true or params.hierarchy then
 			local class = data.relations:isrelated(idx, ent1, ent2)
 			if class==data.relationhash["isAssociatedWith"] then --gold is isAssociatedWith (the only undirected relation)
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
@@ -362,7 +371,7 @@ function test(network, data, params)
 			   end
 			end
 		     else --no hierarchy
-			error("to do")
+			error("???")
 		     end
 		  
 		  elseif true then --all relation in both direction

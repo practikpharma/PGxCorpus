@@ -231,8 +231,8 @@ if frestart then
    -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
    -- print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
    -- print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
-   params.brat = true
-   --rams.hierarchy=false
+   --params.brat = true
+   --params.hierarchy=false
    print("now testing")
    local tab = test(network, tdata, params)
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
