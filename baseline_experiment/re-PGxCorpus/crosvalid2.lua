@@ -81,7 +81,7 @@ while _file and nnetwork<params.maxnet do
    paramsModel.hierarchy = params.hierarchy
    print("================")
    print("tab_res")
-   print(tab_res.isAssociatedWith)
+   print(tab_res.macro)
    local tab = test(network, tdata, paramsModel)
    print("tab")
    print(tab.isAssociatedWith)

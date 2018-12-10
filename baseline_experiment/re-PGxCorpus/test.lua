@@ -70,13 +70,16 @@ function _forward(data, idx, ent1, ent2, network, criterion, params)
 end
 
 function _confusion_matrix2(data, params, confusion_matrix, target, prediction, verbose)
-   --verbose = true
+   verbose = false
+   						       
+   if verbose then
+      print("==================================")
+      print("target " .. target)
+      print("prediction " .. prediction)
+   end
+   if verbose then print_confusion_matrix(data, confusion_matrix); end 
+
    if params.hierarchy then
-      if verbose then
-	 print("==================================")
-	 print("target " .. target)
-	 print("prediction " .. prediction)
-      end
       local target_indice = data.relationhash[target]
       local prediction_indice = data.relationhash[prediction]
       
@@ -112,7 +115,7 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
 	 end
       else
 	 local target_ancestors = {}
-	 local current = target
+	 local current = back_hierarchy_rel[target]
 	 while current do
 	    target_ancestors[current]=true
 	    current = back_hierarchy_rel[current]
@@ -125,22 +128,24 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
 	       confusion_matrix[current_indice][current_indice] = confusion_matrix[current_indice][current_indice] + 1
 	       target_ancestors[current] = false
 	    else
-	       if verbose then print(current .. " is a false positive 6") end
+	       if verbose then print(current .. " is a false positive and " .. target .. " is a false negative 6") end
 	       local current_indice = data.relationhash[current]
-	       confusion_matrix[ target_indice ][current_indice] = confusion_matrix[ target_indice ][current_indice] + 1 
+	       confusion_matrix[ target_indice ][ current_indice ] = confusion_matrix[ target_indice ][current_indice] + 1
 	    end
 	    current = back_hierarchy_rel[current]
 	 end
+
 	 for k,v in pairs(target_ancestors) do
 	    if v then --false negative
 	       local k_indice = data.relationhash[k]
 	       if verbose then print(k .. " is a false negative 7") end
-	       confusion_matrix[k_indice][ data.relationhash["null"] ] = confusion_matrix[k_indice][ data.relationhash["null"] ] + 1 
+		  confusion_matrix[k_indice][ data.relationhash["null"] ] = confusion_matrix[k_indice][ data.relationhash["null"] ] + 1 
 	    end
 	 end
       end
    else
       if target==prediction then
+	 if verbose then print(target .. " is a true positive 5") end
 	 confusion_matrix[data.relationhash[target]][data.relationhash[target]] = confusion_matrix[data.relationhash[target]][data.relationhash[target]] + 1
       else
 	 -- print("error")
@@ -149,9 +154,13 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
 	    print(data.relationhash[data.relationhash[target]] .. " but classified as " .. data.relationhash[data.relationhash[prediction]]) 
 	    io.read()
 	 end
+	 if verbose then print(prediction .. " is a false positive 5") end
+	 if verbose then print(target .. " is a false negative 5") end
 	 confusion_matrix[data.relationhash[target]][data.relationhash[prediction]] = confusion_matrix[data.relationhash[target]][data.relationhash[prediction]] + 1
       end
    end
+   if verbose then print_confusion_matrix(data, confusion_matrix); io.read() end 
+   
 end
 
 -- _confusion_matrix2(nil, {hierarchy=true}, torch.Tensor({10,10}), "decreases", "influences")
