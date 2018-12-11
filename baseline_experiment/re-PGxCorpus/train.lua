@@ -68,6 +68,7 @@ cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=
 cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:option('-anonymize', false, "anonymize entities")
 cmd:option('-notype', false, "do not consider relation type")
+cmd:option('-pgxtype', false, "only consider pgx relationships")
 cmd:option('-oriented', false, "extract oriented relations")
 cmd:option('-nestenttype', 0,  "add the type of the nested entity as input (using k-hot encoding)")
 cmd:text()
@@ -232,7 +233,7 @@ if frestart then
    -- print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
    -- print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
    --params.brat = true
-   --params.hierarchy=false
+   params.hierarchy=false
    print("now testing")
    local tab = test(network, tdata, params)
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)

@@ -70,14 +70,14 @@ function _forward(data, idx, ent1, ent2, network, criterion, params)
 end
 
 function _confusion_matrix2(data, params, confusion_matrix, target, prediction, verbose)
-   verbose = false
-   						       
+   if false and target=="increases" then verbose=true else verbose = false end
+   
    if verbose then
       print("==================================")
       print("target " .. target)
       print("prediction " .. prediction)
    end
-   if verbose then print_confusion_matrix(data, confusion_matrix); end 
+   if verbose then print("confusion_matrix before"); print_confusion_matrix(data, confusion_matrix); end 
 
    if params.hierarchy then
       local target_indice = data.relationhash[target]
@@ -101,9 +101,9 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
       elseif prediction~="null" and hierarchy_rel[prediction][target] then
 	 if verbose then print("the prediction (" .. prediction .. ") is less specific than the target (" .. target .. ")") end
 	 local current = target
-	 local current_indice = data.relationhash[current]
 	 while current~=prediction do
 	    if verbose then print(current .. " is a false negative 3") end
+	    local current_indice = data.relationhash[current]
 	    confusion_matrix[current_indice][ data.relationhash["null"] ] = confusion_matrix[current_indice][ data.relationhash["null"] ] + 1 
 	    current = back_hierarchy_rel[current]
 	 end
@@ -159,7 +159,7 @@ function _confusion_matrix2(data, params, confusion_matrix, target, prediction, 
 	 confusion_matrix[data.relationhash[target]][data.relationhash[prediction]] = confusion_matrix[data.relationhash[target]][data.relationhash[prediction]] + 1
       end
    end
-   if verbose then print_confusion_matrix(data, confusion_matrix); io.read() end 
+   if verbose then print("confusion_matrix after"); print_confusion_matrix(data, confusion_matrix); io.read() end 
    
 end
 

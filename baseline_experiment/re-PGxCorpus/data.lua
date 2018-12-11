@@ -859,6 +859,16 @@ function loadhash(params)
 	 end
       end
    end
+   if params.pgxtype then
+      for i=3,#relationhash do
+	 if relationhash[i]=="isEquivalentTo" or relationhash[i]=="treats" then
+	    relationhash[ relationhash[i] ] = relationhash["null"]
+	 else
+	    relationhash[ relationhash[i] ] = relationhash["isAssociatedWith"]
+	 end
+      end
+      print(relationhash)
+   end
    entityhash2 = {"PADDING", "O", "Entity1", "Entity2", PADDING=1, O=2, Entity1=3, Entity2=4} --for entity position
    
 end
