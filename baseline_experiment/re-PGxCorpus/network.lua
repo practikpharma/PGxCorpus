@@ -200,129 +200,229 @@ function createnetworks(params, data)
    
    local network
 
-   if params.dp==2 or params.dp==3 then error("dp==2 not authorized for arch==6") end
+   if params.arch=="mccnn" then
    
-   local wszs = {}
-   network = nn.Sequential()
-   local net = nn.ConcatTable()
-   local fsz = params.wfsz + params.efsz + params.tfsz + params.pfsz + (2*params.rdfsz)
-   if params.nestenttype~=0 then
-      for i=3,#data.entityhash do fsz = fsz + params.nestenttype end
-   end
-   print(fsz)
-   local dropout = {}
-   for i=1,#params.wszs do
-      if params.tfsz>0 then
-	 assert(data.wordhash["PADDING"]==data.entityhash["PADDING"] and data.entityhash["PADDING"]==data.entityhash2["PADDING"])
+      local wszs = {}
+      network = nn.Sequential()
+      local net = nn.ConcatTable()
+      local fsz = params.wfsz + params.efsz + params.tfsz + params.pfsz + (2*params.rdfsz)
+      if params.nestenttype~=0 then
+	 for i=3,#data.entityhash do fsz = fsz + params.nestenttype end
       end
-      local pad = (params.wszs[i]-1)/2
-      wszs[i] = nn.Sequential()
-      local padding = nn.MapTable()
-      local p = nn.Sequential()
-      p:add(nn.Padding(1,-pad,1,data.wordhash["PADDING"]))
-      p:add(nn.Padding(1,pad,1,data.wordhash["PADDING"]))
-      padding:add(p)
-      wszs[i]:add(padding)
+      print(fsz)
+      local dropout = {}
+      for i=1,#params.wszs do
+	 if params.tfsz>0 then
+	    assert(data.wordhash["PADDING"]==data.entityhash["PADDING"] and data.entityhash["PADDING"]==data.entityhash2["PADDING"])
+	 end
+	 local pad = (params.wszs[i]-1)/2
+	 wszs[i] = nn.Sequential()
+	 local padding = nn.MapTable()
+	 local p = nn.Sequential()
+	 p:add(nn.Padding(1,-pad,1,data.wordhash["PADDING"]))
+	 p:add(nn.Padding(1,pad,1,data.wordhash["PADDING"]))
+	 padding:add(p)
+	 wszs[i]:add(padding)
+	 
+	 
+	 local channels = nn.ConcatTable()
+	 channels:add( nn.Sequential():add( get_par(params, lkts, dropout, data)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
+	 if params.channels>1 then
+	    channels:add( nn.Sequential():add( get_par(params, lkts, dropout, data, true)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
+	 end
+	 if params.channels>2 then error("not implemented") end
+	 wszs[i]:add(channels)
+	 wszs[i]:add( nn.CAddTable() )
+	 
+	 
+	 --wszs[i]:add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i]) )
+	 wszs[i]:add( nn.HardTanh() )--non linearity
+	 wszs[i]:add( nn.Max(1) )
+	 net:add(wszs[i])
+      end
       
-
-      local channels = nn.ConcatTable()
-      channels:add( nn.Sequential():add( get_par(params, lkts, dropout, data)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
-      if params.channels>1 then
-	 channels:add( nn.Sequential():add( get_par(params, lkts, dropout, data, true)):add(nn.JoinTable(2)):add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i])))
-      end
-      if params.channels>2 then error("not implemented") end
-      wszs[i]:add(channels)
-      wszs[i]:add( nn.CAddTable() )
+      network:add(net)
+      network:add( nn.JoinTable(1))
       
+      --print(network)
+      --exit()
       
-      --wszs[i]:add( nn.TemporalConvolution(fsz, params.nhu[1], params.wszs[i]) )
-      wszs[i]:add( nn.HardTanh() )--non linearity
-      wszs[i]:add( nn.Max(1) )
-      net:add(wszs[i])
-   end
-   
-   network:add(net)
-   network:add( nn.JoinTable(1))
-
-   --print(network)
-   --exit()
-   
-   network = {network=network}
-   
-   network.scorer = nn.Sequential()
-   network.scorer:add(nn.Linear(#wszs * params.nhu[1], #data.relationhash))
-   network.scorer:add(nn.LogSoftMax())
-   
-   network.dropout = dropout
-   if params.dropout~=0 and params.dp~=2 then
-      function network.dropout:training()
-	 for i=1,#self do self[i]:training() end
+      network = {network=network}
+      
+      network.scorer = nn.Sequential()
+      network.scorer:add(nn.Linear(#wszs * params.nhu[1], #data.relationhash))
+      network.scorer:add(nn.LogSoftMax())
+      
+      network.dropout = dropout
+      if params.dropout~=0 and params.dp~=2 then
+	 function network.dropout:training()
+	    for i=1,#self do self[i]:training() end
+	 end
+	 function network.dropout:evaluate()
+	    for i=1,#self do self[i]:evaluate() end
+	 end
       end
-      function network.dropout:evaluate()
-	 for i=1,#self do self[i]:evaluate() end
+      
+      function network:forward(input)
+	 self.rep = self.network:forward(input)
+	 return self.scorer:forward(self.rep)
       end
-   end
-   
-   function network:forward(input)
-      self.rep = self.network:forward(input)
-      return self.scorer:forward(self.rep)
-   end
-   
-   function network:backward(input,grad)
-      print("grad")
-      print(grad)
-      local gradrep = self.scorer:backward(self.rep, grad)
-      self.network:backward(input, gradrep)
-   end
+      
+      function network:backward(input,grad)
+	 print("grad")
+	 print(grad)
+	 local gradrep = self.scorer:backward(self.rep, grad)
+	 self.network:backward(input, gradrep)
+      end
 
-   function network:backwardUpdate(input, grad, lr)
-      local gradrep = self.scorer:backwardUpdate(self.rep, grad, lr)
-      self.network:backwardUpdate(input, gradrep, lr)
-   end
+      function network:backwardUpdate(input, grad, lr)
+	 local gradrep = self.scorer:backwardUpdate(self.rep, grad, lr)
+	 self.network:backwardUpdate(input, gradrep, lr)
+      end
 
-   function network:zeroGradParameters()
-      self.network:zeroGradParameters()
-      self.scorer:zeroGradParameters()
-   end
-   
-   function network:updateParameters(lr)
-      self.network:updateParameters(lr)
-      self.scorer:updateParameters(lr)
-   end
-
-   function network:training()
-      self.network:training()
+      function network:zeroGradParameters()
+	 self.network:zeroGradParameters()
+	 self.scorer:zeroGradParameters()
+      end
+      
+      function network:updateParameters(lr)
+	 self.network:updateParameters(lr)
+	 self.scorer:updateParameters(lr)
+      end
+      
+      function network:training()
+	 self.network:training()
       self.scorer:training()
+      end
+      
+      function network:evaluate()
+	 self.network:evaluate()
+	 self.scorer:evaluate()
+      end
+      
+      network.save = {}
+      table.insert(network.save, network.network)
+      table.insert(network.save, network.scorer)
+
+   elseif params.arch=="treelstm" then
+      
+      function treelstm.Tree:print_tree(tab)
+	 print(tab .. self.idx .. " " .. (self.tag and self.tag or "notag"))
+	 io.write(tab .. "{")
+	 for i = 1,#self.sontags do io.write(self.sontags[i] .. " ") end
+	 io.write("}\n")
+	 for i=1,#self.children do
+	    self.children[i]:print_tree(tab .. "\t")
+	 end
+      end
+      
+      -- share module parameters
+      function share_params(cell, src)
+	 if torch.type(cell) == 'nn.gModule' then
+	    for i = 1, #cell.forwardnodes do
+	       local node = cell.forwardnodes[i]
+	       if node.data.module then
+		  node.data.module:share(src.forwardnodes[i].data.module,
+					 'weight', 'bias', 'gradWeight', 'gradBias')
+	       end
+	    end
+	 elseif torch.isTypeOf(cell, 'nn.Module') then
+	    cell:share(src, 'weight', 'bias', 'gradWeight', 'gradBias')
+	 else
+	    error('parameters cannot be shared for this input')
+	 end
+      end
+
+      network = {}
+
+      local treelstm_config = {
+	 in_dim = params.nhu[1],
+	 mem_dim = params.nhu[1],
+	 gate_output = params.gateoutput,
+	 --dropout = (params.dropout~=0 and params.dp==2 or params.dp==3)
+	 --   and params.dropout or nil,
+	 optim = params.optim
+      }
+
+      network.treelstm = treelstm.ChildSumTreeLSTM(treelstm_config)
+      
+      local fsz = params.wfsz + params.efsz + params.tfsz + params.pfsz + (2*params.rdfsz) + params.dtfsz
+      
+      network.lookup = nn.Sequential()
+      local dropout = {}
+      local par = get_par(params, lkts, dropout, data, false)
+      
+      network.lookup:add(par)
+      network.lookup:add(nn.JoinTable(2))
+      local l = nn.Sequential():add(nn.TemporalConvolution(fsz, params.nhu[1],params.wszs[1])):add(nn.HardTanh())
+      network.lookup:add(l)
+      
+      network.scorer = nn.Sequential()
+      network.scorer:add(nn.Linear(params.nhu[1], #data.relationhash))
+      local d
+      if params.dropout~=0 and (params.dp==3 or params.dp==4) then
+	 d = nn.Dropout(params.dropout)
+	 table.insert(dropout, d)
+	 network.scorer:add(d)
+      end
+      network.scorer:add(nn.LogSoftMax())
+   
+      network.save = {}
+      table.insert(network.save, network.lookup)
+      table.insert(network.save, network.treelstm)
+      table.insert(network.save, network.scorer)
+      
+      network.dropout = dropout
+      if params.dropout~=0 and params.dp~=2 then
+	 function network.dropout:training()
+	    for i=1,#self do self[i]:training() end
+	 end
+	 function network.dropout:evaluate()
+	    for i=1,#self do self[i]:evaluate() end
+	 end
+      end
+      
+      local zeros = torch.zeros(params.nhu[1])
+      function network:forward(tree, input)
+	 print(input)
+	 self.emb = self.lookup:forward(input)
+	 self.rep = self.treelstm:forward(tree, self.emb)[2]
+	 return self.scorer:forward(self.rep)
+      end
+      
+      function network:backward(tree, input, grad)
+	 local gradrep = self.scorer:backward(self.rep, grad)
+	 local grademb = self.treelstm:backward(tree, self.emb, {zeros,gradrep})
+	 self.lookup:backward(input, grademb)
+      end
+      
+      function network:zeroGradParameters()
+	 self.lookup:zeroGradParameters()
+	 self.treelstm:zeroGradParameters()
+	 self.scorer:zeroGradParameters()
+      end
+
+      function network:updateParameters(lr)
+       	 self.lookup:updateParameters(lr)
+	 self.treelstm:updateParameters(lr)
+	 self.scorer:updateParameters(lr)
+      end
+
+      function network:training()
+	 self.treelstm:training()
+      end
+      
+      function network:evaluate()
+	 self.treelstm:evaluate()
+      end
+      
+   else
+      error("unknown arch")
    end
-   
-   function network:evaluate()
-      self.network:evaluate()
-      self.scorer:evaluate()
-   end
-   
-   network.save = {}
-   table.insert(network.save, network.network)
-   table.insert(network.save, network.scorer)
-   
-   
-   if false then
-      local input = {torch.Tensor({4,2,3}), torch.Tensor({4,2,3})}
-      print("net")
-      print(net)
-      print("input")
-      print(input)
-      local output = network:forward(input, "full")
-      print("output")
-      print(output)
-      -- print(output[1][1])
-      -- print(output[1][2])
-      -- print(output[2][1])
-      -- print(output[2][2])
-      exit()
-   end
+
    
    function network:printnet()
-      
+      error("not implemented")
    end
    
    function network:getnetsave(params)
@@ -346,7 +446,7 @@ function createnetworks(params, data)
 	 end
       end
       local oldparameters = network.scorer:parameters()
-      --print(oldparameters)
+	 --print(oldparameters)
       for j=1,#oldparameters do
 	 oldparameters[j]:copy( net[2][j] )
       end

@@ -5,6 +5,7 @@ require('rnn')
 require('network')
 require('test')
 require("trepl")
+require("nngraph")
 
 function printw(t, dict)
    print(t:size(1))
@@ -71,6 +72,9 @@ cmd:option('-notype', false, "do not consider relation type")
 cmd:option('-pgxtype', false, "only consider pgx relationships")
 cmd:option('-oriented', false, "extract oriented relations")
 cmd:option('-nestenttype', 0,  "add the type of the nested entity as input (using k-hot encoding)")
+cmd:option('-arch', 'mccnn', 'architecture to use (mccnn or treesltm)')
+cmd:option('-gateoutput', false, 'option for treelstm')
+cmd:option('-dtfsz', 0, 'dependency type feature size')
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -155,6 +159,9 @@ print("/home/joel/torch/install/bin/luajit /home/joel/Bureau/loria/code/semeval2
 loadhash(params)
 
 local data = createdata(params)
+if params.arch=='treelstm' then
+   get_trees(data, params)
+end
 
 -- for i=1,data.size do
 --    print("====================================== " .. i)
@@ -289,7 +296,7 @@ while true do
        	 network.dropout:training()
       end
    end
-
+   
    local perm = torch.randperm(#dataidx)
    
    local nex = 0
@@ -423,7 +430,15 @@ while true do
 		  -- end
 		  --print(input)
 		  local output
-		  output = network:forward(input)
+		  local output
+		  if params.arch=="mccnn" then
+		     output = network:forward(input)
+		  elseif params.arch=="treelstm" then
+		     local t =  data.trees.gettrees(data, idx, idx_ent_1, idx_ent_2)
+		     output = network:forward(t, input)
+		  else
+		     error("")
+		  end
 		  if params.time then timeforward = timeforward + timer2:time().real end
 
 		  -- printw(words, data.wordhash)
@@ -474,9 +489,16 @@ while true do
 		  cost = cost + criterion:forward(output, target)
 		  local grad = criterion:backward(output, target)
 		  
-		  		  network:zeroGradParameters()
+		  network:zeroGradParameters()
 		  if params.time then timer2:reset() end
-		  network:backwardUpdate(input, grad, params.lr)
+		  
+		  if params.arch=="mccnn" then
+		     network:backwardUpdate(input, grad, params.lr)
+		  elseif params.arch=="treelstm" then
+		     local t =  data.trees.gettrees(data, idx, idx_ent_1, idx_ent_2)
+		     network:backward(t, input, grad)
+		     network:updateParameters(params.lr)
+		  end
 		  if params.time then timebackward = timebackward + timer2:time().real end
 
 		  
