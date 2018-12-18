@@ -954,6 +954,7 @@ function get_trees(data, params)
 	 --parse file if not parsed
 	 --https://github.com/BLLIP/bllip-parser
 	 --TODO
+	 print("parsing")
 	 io.read()
 
 	 --load parse trees
