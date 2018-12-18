@@ -954,7 +954,7 @@ function get_trees(data, params)
 	 --parse file if not parsed
 	 --https://github.com/BLLIP/bllip-parser
 	 --TODO
-
+	 io.read()
 
 	 --load parse trees
 	 local trees = loadtrees("data/PGxCorpus/trees_anon.input.McClosky.trees.ddg_tree_comp_reps")
