@@ -1,8 +1,10 @@
 #parsing using the charniak parser (https://github.com/BLLIP/bllip-parser) +
+#http://bllip.cs.brown.edu/download/bioparsingmodel-rel1.tar.gz
+#python ModelFetcher.py -i GENIA+PubMed
 
 data=`pwd`/$1
 cd bllip-parser
-sed 's/\(.*\)/<s> \1 <\/s>/' $data/$2 | first-stage/PARSE/parseIt -l399 -N50 /home/joel/.local/share/bllipparser/GENIA+PubMed/parser/ | second-stage/programs/features/best-parses -l /home/joel/.local/share/bllipparser/GENIA+PubMed/reranker/features.gz /home/joel/.local/share/bllipparser/GENIA+PubMed/reranker/weights.gz > $data/$2.McClosky.trees
+sed 's/\(.*\)/<s> \1 <\/s>/' $data/$2 | first-stage/PARSE/parseIt -l399 -N50 `pwd`.local/share/bllipparser/GENIA+PubMed/parser/ | second-stage/programs/features/best-parses -l /home/joel/.local/share/bllipparser/GENIA+PubMed/reranker/features.gz /home/joel/.local/share/bllipparser/GENIA+PubMed/reranker/weights.gz > $data/$2.McClosky.trees
 cd -
 #cd ~/Bureau/loria/soft/
 java -cp nlp4j-ddr.jar edu.emory.mathcs.nlp.bin.DDGConvert -i $data/$2.McClosky.trees
