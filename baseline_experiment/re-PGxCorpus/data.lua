@@ -945,7 +945,7 @@ function get_trees(data, params)
       include('./treeLSTM/models/ChildSumTreeLSTM.lua')
       
       if params.anonymize then
-	 if not paths.filep("data/PGxCorpus/trees_anon.input.McClosky.trees.ddg_tree_comp_reps") then
+	 if not paths.filep("data/PGxCorpus/trees.bin") then
 	    local f = io.open("data/PGxCorpus/trees_anon.input", "w")
 	    if true then
 	       for i=1,#data.words.idx do
@@ -979,36 +979,48 @@ function get_trees(data, params)
 	    print("please parse the file \"data/PGxCorpus/trees_anon.input\" and provide a CONLL formated file")
 	    print("the run the extractTrees.lua scrip on it to generate de trees")
 	    io.read()
-	 end
 
-	 --load parse trees
-	 local trees = loadtrees("data/PGxCorpus/trees_anon.input.McClosky.trees.ddg_tree_comp_reps")
-	 trees2 = tree2tree(trees)
-	 print(trees2[1])
-	 
-	 local trees = {}
-	 local idx = 0
-	 for i=1,#data.words.idx do
-	    trees[i] = {}
-	    for j=1,#data.entities[i] do
-	       if not trees[i][j] then trees[i][j] = {} end
-	       for k=j+1,#data.entities[i] do
-		  if not trees[i][k] then trees[i][k] = {} end
-		  if is_included(data.entities[i][j][1], data.entities[i][k][1])
-		     or is_included(data.entities[i][k][1], data.entities[i][j][1])
-		     or overlapp(data.entities[i][j][5], data.entities[i][k][5])
-		  then
-		     
-		  else
-		     if i==1 then print("tree " .. i .. " " .. j .. " " .. k) end
-		     idx = idx + 1
-		     trees[i][j][k] = trees2[idx]
-		     trees[i][k][j] = trees2[idx] --the parse tree is the same in both directions
+	    
+	    --load parse trees
+	    local trees = loadtrees("data/PGxCorpus/trees_anon.input.McClosky.trees.ddg_tree_comp_reps")
+	    trees2 = tree2tree(trees)
+	    print(trees2[1])
+	    
+	    local trees = {}
+	    local idx = 0
+	    for i=1,#data.words.idx do
+	       trees[data.names[i]] = {}
+	       for j=1,#data.entities[i] do
+		  if not trees[data.names[i]][j] then trees[data.names[i]][j] = {} end
+		  for k=j+1,#data.entities[i] do
+		     if not trees[data.names[i]][k] then trees[data.names[i]][k] = {} end
+		     if is_included(data.entities[i][j][1], data.entities[i][k][1])
+			or is_included(data.entities[i][k][1], data.entities[i][j][1])
+			or overlapp(data.entities[i][j][5], data.entities[i][k][5])
+		     then
+			
+		     else
+			if i==1 then print("tree " .. i .. " " .. j .. " " .. k) end
+			idx = idx + 1
+			trees[data.names[i]][j][k] = trees2[idx]
+			trees[data.names[i]][k][j] = trees2[idx] --the parse tree is the same in both directions
+		     end
 		  end
 	       end
 	    end
+	    
+	    print("writing file")
+	    local f = torch.DiskFile("data/PGxCorpus/trees.bin", 'w'):binary()
+	    f:writeObject(trees)
+	    f:close()
+	    exit()
+	 else
+	    print("loading file")
+	    local f = torch.DiskFile("data/PGxCorpus/trees.bin", 'r'):binary()
+	    data.trees = f:readObject()
+	    f:close()
+	    print(data.trees)
 	 end
-	 data.trees = trees
 	 
 	 function data.trees.gettrees(data, nsent, e1, e2)
 	    if false then
@@ -1016,11 +1028,11 @@ function get_trees(data, params)
 	       print(nsent)
 	       print(e1)
 	       print(e2)
-	       print(#data.trees[nsent])
-	       print(#data.trees[nsent][e1])
-	       print(data.trees[nsent][e1][e2])
+	       print(#data.trees[ data.names[nsent] ])
+	       print(#data.trees[ data.names[nsent] ][e1])
+	       print(data.trees[ data.names[nsent] ][e1][e2])
 	    end
-	    return data.trees[nsent][e1][e2]
+	    return data.trees[ data.names[nsent] ][e1][e2]
 	 end
 	 
       else
