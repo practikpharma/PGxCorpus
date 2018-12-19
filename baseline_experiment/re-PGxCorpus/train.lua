@@ -301,6 +301,8 @@ while true do
    
    local nex = 0
    for i=1, perm:size(1) do
+      nex = nex + 1 
+      print(nex)
       nforward = nforward + 1
       local idx = params.nosgd and dataidx[i][1] or dataidx[ perm[i] ][1] 
       --local ent_pair_idx = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
