@@ -308,7 +308,7 @@ while true do
       local idx_ent_2 = params.nosgd and dataidx[i][3] or dataidx[ perm[i] ][3]
 
       
-      --print(i)
+      --print(idx)
       --print(" sentence " .. idx .. " size " .. " nb entities " .. data.entities.nent(data, idx) .. " entity couple " .. ent_pair_idx)
       --printw(datas[datacorpus].words[idx], datas[datacorpus].wordhash)
       
@@ -368,8 +368,8 @@ while true do
 		  -- print(data.entities[idx][idx_ent_2])
 		  -- exit()
 	       else
-		  --print(idx_ent_1, idx_ent_2)
-		  --print(nf .. " sentence " .. idx .. " relation between " .. idx_ent_1 .. " and " .. idx_ent_2 .. " (" .. data.relations:isrelated(idx, idx_ent_1, idx_ent_2) .. ")")
+		  --print("train " .. idx .. " " .. idx_ent_1 .. " " .. idx_ent_2)
+	--	  print("sentence " .. idx .. " relation between " .. idx_ent_1 .. " and " .. idx_ent_2 .. " (" .. data.relations:isrelated(idx, idx_ent_1, idx_ent_2) .. ")" .. data.words[idx]:size(1))
 		  local entities = data.entities.getent(data, idx, idx_ent_1, idx_ent_2)
 		  if (params.dp==2 or params.dp==3 or params.rnn=="lstm" or params.rnn=="cnn")  then entities = entities:view(1, entities:size(1)) end
 		  
@@ -430,11 +430,12 @@ while true do
 		  -- end
 		  --print(input)
 		  local output
-		  local output
 		  if params.arch=="mccnn" then
 		     output = network:forward(input)
 		  elseif params.arch=="treelstm" then
 		     local t =  data.trees.gettrees(data, idx, idx_ent_1, idx_ent_2)
+		     --printw(input[1], data.wordhash)
+		     --t:print()
 		     output = network:forward(t, input)
 		  else
 		     error("")
@@ -512,7 +513,7 @@ while true do
 	    --io.read()
    --end
      -- end
-      --io.read()
+	    --io.read()
 
       ::continue::
       
@@ -579,7 +580,7 @@ while true do
    local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
    local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
    
-   local tab = test(network, subtraindata, params) --
+   local tab = test(network, data, params) --subtrain
 
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
    print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)

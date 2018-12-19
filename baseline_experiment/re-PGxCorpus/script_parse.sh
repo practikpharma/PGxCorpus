@@ -4,7 +4,7 @@
 
 data=`pwd`/$1
 cd bllip-parser
-sed 's/\(.*\)/<s> \1 <\/s>/' $data/$2 | first-stage/PARSE/parseIt -l399 -N50 `pwd`/.local/share/bllipparser/GENIA+PubMed/parser/ | second-stage/programs/features/best-parses -l `pwd`/.local/share/bllipparser/GENIA+PubMed/reranker/features.gz `pwd`/.local/share/bllipparser/GENIA+PubMed/reranker/weights.gz > $data/$2.McClosky.trees
+sed 's/\(.*\)/<s> \1 <\/s>/' $data/$2 | first-stage/PARSE/parseIt -K -l399 -N50 $HOME/.local/share/bllipparser/GENIA+PubMed/parser/ | second-stage/programs/features/best-parses -l $HOME/.local/share/bllipparser/GENIA+PubMed/reranker/features.gz $HOME/.local/share/bllipparser/GENIA+PubMed/reranker/weights.gz > $data/$2.McClosky.trees
 cd -
 #cd ~/Bureau/loria/soft/
 java -cp nlp4j-ddr.jar edu.emory.mathcs.nlp.bin.DDGConvert -i $data/$2.McClosky.trees

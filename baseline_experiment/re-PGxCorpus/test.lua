@@ -60,8 +60,17 @@ function _forward(data, idx, ent1, ent2, network, criterion, params)
    if params.anonymize then
       input = anonymize(words, data.entities[idx], ent1, ent2, data, params)
    end
-	       
-   local output = network:forward(input)
+   
+   local output
+   if params.arch=="mccnn" then
+      output = network:forward(input)
+   elseif params.arch=="treelstm" then
+      local t =  data.trees.gettrees(data, idx, ent1, ent2)
+      output = network:forward(t, input)
+      network.treelstm:clean(t)
+   else
+      error("")
+   end
    
    local target = data.relations:isrelated(idx, ent1, ent2)
    local cost = criterion:forward(output, target)
@@ -305,7 +314,7 @@ function test(network, data, params)
 	       end
 	       --These entities are nested or overlapp and thus are not related
 	    else
-	       --print("relation between " .. ent1 .. " and " .. ent2 .. " (" .. data.relations:isrelated(idx, ent1, ent2) .. ")")
+	       --print("test " .. idx .. " relation between " .. ent1 .. " and " .. ent2 .. " (" .. data.relations:isrelated(idx, ent1, ent2) .. ")")
 	       local c, output = _forward(data, idx, ent1, ent2, network, criterion, params) 
 	       cost = cost + c
 	       

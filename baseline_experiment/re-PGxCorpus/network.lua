@@ -209,7 +209,6 @@ function createnetworks(params, data)
       if params.nestenttype~=0 then
 	 for i=3,#data.entityhash do fsz = fsz + params.nestenttype end
       end
-      print(fsz)
       local dropout = {}
       for i=1,#params.wszs do
 	 if params.tfsz>0 then
@@ -269,8 +268,8 @@ function createnetworks(params, data)
       end
       
       function network:backward(input,grad)
-	 print("grad")
-	 print(grad)
+	 -- print("grad")
+	 -- print(grad)
 	 local gradrep = self.scorer:backward(self.rep, grad)
 	 self.network:backward(input, gradrep)
       end
@@ -292,7 +291,7 @@ function createnetworks(params, data)
       
       function network:training()
 	 self.network:training()
-      self.scorer:training()
+	 self.scorer:training()
       end
       
       function network:evaluate()
@@ -384,7 +383,6 @@ function createnetworks(params, data)
       
       local zeros = torch.zeros(params.nhu[1])
       function network:forward(tree, input)
-	 print(input)
 	 self.emb = self.lookup:forward(input)
 	 self.rep = self.treelstm:forward(tree, self.emb)[2]
 	 return self.scorer:forward(self.rep)
@@ -401,7 +399,7 @@ function createnetworks(params, data)
 	 self.treelstm:zeroGradParameters()
 	 self.scorer:zeroGradParameters()
       end
-
+      
       function network:updateParameters(lr)
        	 self.lookup:updateParameters(lr)
 	 self.treelstm:updateParameters(lr)

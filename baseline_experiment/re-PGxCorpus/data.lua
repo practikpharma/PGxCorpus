@@ -1,4 +1,5 @@
 require 'torch'
+require "paths"
 
 function copy_tab(tab)
    local res = {}
@@ -170,7 +171,7 @@ function anonymize(words, entities, ent1, ent2, data, params)
    entities[ent2][6] = new_ent
    --io.read()
 
-   print(_ws)
+   --print(_ws)
    local new_words = torch.Tensor(_ws)
    
    local ents1 = anon_getent(new_words, entities, ent1, ent2, data)
@@ -906,6 +907,27 @@ function createdata(params)
    
    -- io.read()
 
+   if params.rdfsz~=0 then
+      local get_relative_distance
+      do 
+	 local reldists = {torch.Tensor(), torch.Tensor()}
+	 function get_relative_distance(ent, nent)
+	    reldists[nent]:resizeAs(ent):fill(0)
+	    local _, currentent = ent:eq(nent+2):max(1) --+2 for padding and nul
+	    currentent = currentent[1]
+	    --print(ent)
+	    --print(currentent)
+	    for i=1,reldists[nent]:size(1) do
+   	       reldists[nent][i]=math.abs(currentent-i)+1
+	    end
+	    return reldists[nent]
+	 end
+      end
+      
+      local en = torch.Tensor({2,2,2,2,2,3,2,3,2,2,2,4,2})
+      print(get_relative_distance(en, 4))
+      exit()
+   end
    
    return {names=names, wordhash=wordhash, entityhash=entityhash, entityhash2=entityhash2, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
    
@@ -923,39 +945,41 @@ function get_trees(data, params)
       include('./treeLSTM/models/ChildSumTreeLSTM.lua')
       
       if params.anonymize then
-	 local f = io.open("data/PGxCorpus/trees_anon.input", "w")
-	 if true then
-	    for i=1,#data.words.idx do
-	       for j=1,#data.entities[i] do
-		  for k=j+1,#data.entities[i] do
-		     if is_included(data.entities[i][j][1], data.entities[i][k][1])
-		     or is_included(data.entities[i][k][1], data.entities[i][j][1])
-			or overlapp(data.entities[i][j][5], data.entities[i][k][5])
-		     then
-			
-		     else
-			-- print("========================================================== " .. j .. " " .. k)
-			-- print(data.words[i])
-			-- print(data.words.sent[i])
-			local toto = anonymize(data.words[i], data.entities[i], j, k, data, params)
-			--printw(toto[1], data.wordhash)
-			for w=1,toto[1]:size(1) do
-			   f:write(data.wordhash[toto[1][w]] .. " ")
+	 if not paths.filep("data/PGxCorpus/trees_anon.input.McClosky.trees.ddg_tree_comp_reps") then
+	    local f = io.open("data/PGxCorpus/trees_anon.input", "w")
+	    if true then
+	       for i=1,#data.words.idx do
+		  for j=1,#data.entities[i] do
+		     for k=j+1,#data.entities[i] do
+			if is_included(data.entities[i][j][1], data.entities[i][k][1])
+			   or is_included(data.entities[i][k][1], data.entities[i][j][1])
+			   or overlapp(data.entities[i][j][5], data.entities[i][k][5])
+			then
+			   
+			else
+			   -- print("========================================================== " .. j .. " " .. k)
+			   -- print(data.words[i])
+			   -- print(data.words.sent[i])
+			   local toto = anonymize(data.words[i], data.entities[i], j, k, data, params)
+			   --printw(toto[1], data.wordhash)
+			   for w=1,toto[1]:size(1) do
+			      f:write(data.wordhash[toto[1][w]] .. " ")
+			   end
+			   f:write("\n")
+			   --io.read()
 			end
-			f:write("\n")
-			--io.read()
 		     end
 		  end
 	       end
+	       f:close()
 	    end
-	    f:close()
+	    
+	    --parse file if not parsed
+	    --https://github.com/BLLIP/bllip-parser
+	    print("please parse the file \"data/PGxCorpus/trees_anon.input\" and provide a CONLL formated file")
+	    print("the run the extractTrees.lua scrip on it to generate de trees")
+	    io.read()
 	 end
-	 
-	 --parse file if not parsed
-	 --https://github.com/BLLIP/bllip-parser
-	 --TODO
-	 print("parsing")
-	 io.read()
 
 	 --load parse trees
 	 local trees = loadtrees("data/PGxCorpus/trees_anon.input.McClosky.trees.ddg_tree_comp_reps")
@@ -967,30 +991,35 @@ function get_trees(data, params)
 	 for i=1,#data.words.idx do
 	    trees[i] = {}
 	    for j=1,#data.entities[i] do
-	       trees[i][j] = {}
+	       if not trees[i][j] then trees[i][j] = {} end
 	       for k=j+1,#data.entities[i] do
+		  if not trees[i][k] then trees[i][k] = {} end
 		  if is_included(data.entities[i][j][1], data.entities[i][k][1])
 		     or is_included(data.entities[i][k][1], data.entities[i][j][1])
-			or overlapp(data.entities[i][j][5], data.entities[i][k][5])
+		     or overlapp(data.entities[i][j][5], data.entities[i][k][5])
 		  then
 		     
 		  else
+		     if i==1 then print("tree " .. i .. " " .. j .. " " .. k) end
 		     idx = idx + 1
 		     trees[i][j][k] = trees2[idx]
+		     trees[i][k][j] = trees2[idx] --the parse tree is the same in both directions
 		  end
 	       end
 	    end
 	 end
 	 data.trees = trees
-
+	 
 	 function data.trees.gettrees(data, nsent, e1, e2)
-	    print("==============================================================================")
-	    print(nsent)
-	    print(e1)
-	    print(e2)
-	    print(#data.trees[nsent])
-	    print(#data.trees[nsent][e1])
-	    print(data.trees[nsent][e1][e2])
+	    if false then
+	       print("==============================================================================")
+	       print(nsent)
+	       print(e1)
+	       print(e2)
+	       print(#data.trees[nsent])
+	       print(#data.trees[nsent][e1])
+	       print(data.trees[nsent][e1][e2])
+	    end
 	    return data.trees[nsent][e1][e2]
 	 end
 	 
@@ -1044,7 +1073,7 @@ function extract_data(data, percentage, sector, remove)
       end
    end
 
-   local tabs = {entities=true,relations=true,ids=true, names=true}
+   local tabs = {entities=true,relations=true,ids=true, names=true, trees=true}
    --local tabs = {words=true}
    
    -- if false then
@@ -1071,7 +1100,7 @@ function extract_data(data, percentage, sector, remove)
    newdata.entities.getent = data.entities.getent
    newdata.entities.getenttags = data.entities.getenttags
    newdata.entities.getnestenttype = data.entities.getnestenttype
-   
+   if data.trees then newdata.trees.gettrees = data.trees.gettrees end
    
    newdata.relations.isrelated = data.relations.isrelated
    
