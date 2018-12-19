@@ -306,7 +306,7 @@ while true do
       --local ent_pair_idx = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
       local idx_ent_1 = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
       local idx_ent_2 = params.nosgd and dataidx[i][3] or dataidx[ perm[i] ][3]
-
+      print(data.names[idx])
       
       --print(idx)
       --print(" sentence " .. idx .. " size " .. " nb entities " .. data.entities.nent(data, idx) .. " entity couple " .. ent_pair_idx)
