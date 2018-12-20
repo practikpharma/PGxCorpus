@@ -582,7 +582,7 @@ while true do
    local f_micro_recall = io.open(rundir .. "/micro_recall_train", 'a')
    local f_micro_f1 = io.open(rundir .. "/micro_f1-score_train", 'a')
    
-   local tab = test(network, data, params) --subtrain
+   local tab = test(network, subtraindata, params) --
 
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
    print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
