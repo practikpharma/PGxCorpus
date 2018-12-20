@@ -419,6 +419,7 @@ while true do
 		     -- 	io.write("\n")
 		     -- end
 		  end
+		  --print(input)
 		  --io.read()
 		  --print(input)
 		  --print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")

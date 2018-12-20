@@ -88,7 +88,7 @@ function anonymize(words, entities, ent1, ent2, data, params)
    
    entities[ent1][6] = copy_tab(entities[ent1][5])
    entities[ent2][6] = copy_tab(entities[ent2][5])
-
+   
    --print("==================")
    --print(entities[ent1][4])
    --print(entities[ent2][4])
@@ -180,11 +180,17 @@ function anonymize(words, entities, ent1, ent2, data, params)
    local ents2 = anon_getenttags(data, new_words, entities, ent1, ent2)
    --printw(ents2, data.entityhash)
    --io.read()
-
+   
    local new_input = {new_words}
    if params.tfsz>0 then
       table.insert(new_input, ents2)
    end
+   
+   if params.rdfsz then
+      table.insert(new_input, data.get_relative_distance(ents1, 1))
+      table.insert(new_input, data.get_relative_distance(ents1, 2))
+   end
+
    if params.nestenttype>0 then
       local nests = anon_getnestenttype(data, new_words, entities, ent1, ent2)
       --print(nests)
@@ -907,29 +913,43 @@ function createdata(params)
    
    -- io.read()
 
+   local get_relative_distance
    if params.rdfsz~=0 then
-      local get_relative_distance
       do 
 	 local reldists = {torch.Tensor(), torch.Tensor()}
 	 function get_relative_distance(ent, nent)
 	    reldists[nent]:resizeAs(ent):fill(0)
-	    local _, currentent = ent:eq(nent+2):max(1) --+2 for padding and nul
-	    currentent = currentent[1]
+	    local pattern = ent:eq(nent+2)
+	    local pos = {}
+	    for i=1,pattern:size(1) do if pattern[i]==1 then table.insert(pos, i) end
+	    end
+	    --print(pattern)
+	    --print(pos)
+	    --local _, currentent = ent:eq(nent+2):max(1) --+2 for padding and null
+	    --currentent = currentent[1]
 	    --print(ent)
 	    --print(currentent)
 	    for i=1,reldists[nent]:size(1) do
-   	       reldists[nent][i]=math.abs(currentent-i)+1
+	       local min = math.huge
+	       for j=1,#pos do if pos[j]<min then min = math.abs(pos[j]-i) end
+	       end
+	       reldists[nent][i] = min+1
+	       --reldists[nent][i]=math.abs(currentent-i)+1
 	    end
+	    --print(reldists[nent])
+	    --io.read()
 	    return reldists[nent]
 	 end
       end
-      
-      local en = torch.Tensor({2,2,2,2,2,3,2,3,2,2,2,4,2})
-      print(get_relative_distance(en, 4))
-      exit()
+      -- local en = torch.Tensor({2,2,2,2,2,3,2,3,2,2,2,4,2})
+      -- print(get_relative_distance(en, 1):reshape(1,en:size(1)))
+      -- print(get_relative_distance(en, 2):reshape(1,en:size(1)))
+      -- print(en:reshape(1,en:size(1)))
+      --exit()
    end
+
    
-   return {names=names, wordhash=wordhash, entityhash=entityhash, entityhash2=entityhash2, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx}
+   return {names=names, wordhash=wordhash, entityhash=entityhash, entityhash2=entityhash2, relationhash=relationhash, words=words, entities=entities, relations=relations, size=#words.idx, get_relative_distance=get_relative_distance}
    
 end
 
