@@ -302,13 +302,13 @@ while true do
    local nex = 0
    for i=1, perm:size(1) do
       nex = nex + 1 
-      print(nex)
+      --print(nex)
       nforward = nforward + 1
       local idx = params.nosgd and dataidx[i][1] or dataidx[ perm[i] ][1] 
       --local ent_pair_idx = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
       local idx_ent_1 = params.nosgd and dataidx[i][2] or dataidx[ perm[i] ][2]
       local idx_ent_2 = params.nosgd and dataidx[i][3] or dataidx[ perm[i] ][3]
-      print(data.names[idx])
+      --print(data.names[idx])
       
       --print(idx)
       --print(" sentence " .. idx .. " size " .. " nb entities " .. data.entities.nent(data, idx) .. " entity couple " .. ent_pair_idx)
