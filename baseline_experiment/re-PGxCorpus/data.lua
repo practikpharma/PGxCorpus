@@ -199,7 +199,7 @@ end
 local function loadnames(pathdata, maxload)
    print("loading names in " .. pathdata)
    local indices = {}
-   local handle = io.popen("find " .. pathdata .. " -name '*.txt' | sort")
+   local handle = io.popen("export LC_ALL=C; find " .. pathdata .. " -name '*.txt' | sort")
    
    local filename = handle:read()
    while filename do
@@ -338,7 +338,7 @@ local function loadstartend(pathdata, feature, maxload)
    local ends = {}
    local _break = false
 
-   local handle = io.popen("find " .. pathdata .. " -name '*.txt' | sort")
+   local handle = io.popen("export LC_ALL=C; find " .. pathdata .. " -name '*.txt' | sort")
    local filename = handle:read()
    while filename do
       --print(string.format('loading startend for <%s>', filename))
@@ -550,7 +550,7 @@ local function loadwords(pathdata, hash, addraw, feature, maxload)
    local sentences = {}
    local _break = false
    
-   local handle = io.popen("find " .. pathdata .. " -name '*.txt' | sort")
+   local handle = io.popen("export LC_ALL=C; find " .. pathdata .. " -name '*.txt' | sort")
    local filename = handle:read()
    while filename do
       --print(string.format('loading <%s>', filename))
@@ -644,7 +644,7 @@ local function loadentities(pathdata, extention, params, entityhash)
    local entities = {}
    local mapping = {}
    
-   local handle = io.popen("find " .. pathdata .. " -name '*" .. extention .. "' | sort")
+   local handle = io.popen("export LC_ALL=C; find " .. pathdata .. " -name '*" .. extention .. "' | sort")
    local filename = handle:read()
    while filename do
       --print(string.format('loading caps for <%s>', filename))
@@ -769,7 +769,7 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
    local relations = {}
    local count = 0
 
-   local handle = io.popen("find " .. pathdata .. " -name '*" .. extention .. "' | sort")
+   local handle = io.popen("export LC_ALL=C; find " .. pathdata .. " -name '*" .. extention .. "' | sort")
    local filename = handle:read()
    while filename do
       count = count + 1
