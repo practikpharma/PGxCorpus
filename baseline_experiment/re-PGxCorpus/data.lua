@@ -186,7 +186,7 @@ function anonymize(words, entities, ent1, ent2, data, params)
       table.insert(new_input, ents2)
    end
    
-   if params.rdfsz then
+   if params.rdfsz and params.rdfsz~=0 then
       table.insert(new_input, data.get_relative_distance(ents1, 1))
       table.insert(new_input, data.get_relative_distance(ents1, 2))
    end
