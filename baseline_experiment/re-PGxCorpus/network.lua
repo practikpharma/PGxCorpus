@@ -346,7 +346,9 @@ function createnetworks(params, data)
       network.treelstm = treelstm.ChildSumTreeLSTM(treelstm_config)
       
       local fsz = params.wfsz + params.efsz + params.tfsz + params.pfsz + (2*params.rdfsz) + params.dtfsz
-      
+      if params.nestenttype~=0 then
+	 for i=3,#data.entityhash do fsz = fsz + params.nestenttype end
+      end
       network.lookup = nn.Sequential()
       local dropout = {}
       local par = get_par(params, lkts, dropout, data, false)
