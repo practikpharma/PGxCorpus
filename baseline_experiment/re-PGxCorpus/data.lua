@@ -845,6 +845,7 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
       if not params.oriented then
 	 assert(e1<e2)
       end
+      --print("=================")
       --print(self[nsent])
       --print(nsent)
       --print(e1)
