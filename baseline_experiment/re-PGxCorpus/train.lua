@@ -487,6 +487,8 @@ while true do
 
 		  
 		  local target = data.relations:isrelated(idx, idx_ent_1, idx_ent_2)
+		  --print(target)
+		  --io.read()
 		  --printw(input[1], data.wordhash)
 		  --print(data.entities[idx])
 		  --print(data.relations[idx])
@@ -502,6 +504,8 @@ while true do
 
 		  cost = cost + criterion:forward(output, target)
 		  local grad = criterion:backward(output, target)
+		  --print(grad)
+		  --io.read()
 		  
 		  network:zeroGradParameters()
 		  if params.time then timer2:reset() end

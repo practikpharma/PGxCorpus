@@ -858,10 +858,10 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
 	    while current do
 	       --print(current)
 	       --if params.softmargin then
-	--	  target[ hash[current] ] = 1
-	  --     else
-		  target[i] = hash[current]
-	    --   end
+	       --	  target[ hash[current] ] = 1
+	       --     else
+	       target[i] = hash[current]
+	       --     end
 	       current = back_hierarchy_rel[current]
 	       i = i + 1
 	    end
