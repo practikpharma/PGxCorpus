@@ -831,6 +831,15 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
       filename = handle:read()
    end
 
+   local back_hierarchy_rel = {}
+   back_hierarchy_rel["treats"] = "isAssociatedWith"
+   back_hierarchy_rel["influences"] = "isAssociatedWith"
+   back_hierarchy_rel["decreases"] = "influences"
+   back_hierarchy_rel["increases"] = "influences"
+   back_hierarchy_rel["causes"] = "influences"
+   back_hierarchy_rel["isAssociatedWith"] = nil
+   back_hierarchy_rel["isEquivalentTo"] = nil
+   
    local target = torch.Tensor(#hash)
    relations.isrelated = function(self, nsent, e1, e2, test)
       if not params.oriented then
@@ -843,7 +852,14 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
       if (not test) and params.trainhierarchy then
 	 target:fill(0)
 	 if self[nsent][e1] and self[nsent][e1][e2] and params.onlylabel[ hash[self[nsent][e1][e2]] ] then
-	    target[1] = self[nsent][e1][e2]
+	    local i=1
+	    local current = hash[self[nsent][e1][e2]]
+	    while current do
+	       --print(current)
+	       target[i] = hash[current]
+	       current = back_hierarchy_rel[current]
+	       i = i + 1
+	    end
 	 else
 	    target[1] = hash["null"]
 	 end
