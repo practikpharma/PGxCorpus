@@ -67,6 +67,7 @@ cmd:option('-channels', 1, '')
 cmd:option('-brat', false, "produce gold and prediction files in brat format")
 cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=true,decreases=true,treats=true,causes=true,increases=true}', 'Only considers the labels given in option')
 cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
+cmd:option('-trainhierarchy', false, "consider entity hierarchy at train time")
 cmd:option('-anonymize', false, "anonymize entities")
 cmd:option('-notype', false, "do not consider relation type")
 cmd:option('-pgxtype', false, "only consider pgx relationships")
@@ -256,7 +257,12 @@ end
 
 local networksave = network:getnetsave(params)
 
-local criterion = nn.ClassNLLCriterion()
+local criterion
+if params.trainhierarchy then
+   criterion = nn.MultiLabelMarginCriterion()
+else
+   criterion = nn.ClassNLLCriterion()
+end
 
 params.best = params.best or 0
 
@@ -352,7 +358,7 @@ while true do
 	       --print("do not forward relation between " .. idx_ent_1 .. " and " .. idx_ent_2 .. " " .. idx) else print("do forward")
 	    else
 	       if is_included(data.entities[idx][idx_ent_1][1], data.entities[idx][idx_ent_2][1]) or is_included(data.entities[idx][idx_ent_2][1], data.entities[idx][idx_ent_1][1]) or overlapp(data.entities[idx][idx_ent_1][5], data.entities[idx][idx_ent_2][5]) then
-		  if data.relations:isrelated(idx, idx_ent_1, idx_ent_2)~=data.relationhash.null then
+		  if data.relations:isrelated(idx, idx_ent_1, idx_ent_2, true)~=data.relationhash.null 		  then
 		     print(data.entities[idx][idx_ent_1][3])
 		     print(data.entities[idx][idx_ent_2][3])
 		     print(idx_ent_1, idx_ent_2)
@@ -478,8 +484,6 @@ while true do
 		  --printw(input[1], data.wordhash)
 		  --print(data.entities[idx])
 		  --print(data.relations[idx])
-		  --print(target)
-		  --io.read()
 		  
 		  --print(network.network:get(2).output:sum())
 		  if params.debug2 then printinput(words, data.wordhash, input[2], data.wordhash) end
@@ -489,7 +493,7 @@ while true do
 		     print("old " .. target .. " " .. indice[1])
 		     for i=1,output:size(1) do io.write(output[i] .. " ") end; io.write("\n")
 		  end
-		  
+
 		  cost = cost + criterion:forward(output, target)
 		  local grad = criterion:backward(output, target)
 		  

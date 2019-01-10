@@ -181,6 +181,7 @@ end
 
 function _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice)
    --if data.relationhash[class]=="int" then io.read() end
+   print(class)
    precision_recall[class].totalpos = precision_recall[class].totalpos +1
    if equal_rel(data.relationhash[class], data.relationhash[indice], params.hierarchy) then
       precision_recall[class].truepos = precision_recall[class].truepos+1
@@ -264,9 +265,14 @@ function test(network, data, params)
    timer:reset()
 
    network:evaluate()
-   
-   local criterion = nn.ClassNLLCriterion()
 
+   local criterion
+   if params.trainhierarchy then
+      criterion = nn.MultiLabelMarginCriterion()
+   else
+      criterion = nn.ClassNLLCriterion()
+   end
+   
    if params.dropout~=0 then
       if params.dp==1 or params.dp==3 or params.dp==4 then
 	 network.dropout:evaluate()
@@ -305,7 +311,7 @@ function test(network, data, params)
       for ent1=1,data.entities.nent(data,idx) do
 	 for ent2=ent1+1,data.entities.nent(data,idx) do --
 	    if is_included(data.entities[idx][ent1][1], data.entities[idx][ent2][1]) or is_included(data.entities[idx][ent2][1], data.entities[idx][ent1][1]) or overlapp(data.entities[idx][ent1][5], data.entities[idx][ent2][5]) then
-	       if data.relations:isrelated(idx, ent1, ent2)~=data.relationhash.null then
+	       if data.relations:isrelated(idx, ent1, ent2, true)~=data.relationhash.null then
 		  print(data.entities[idx][ent1][3])
 		  print(data.entities[idx][ent2][3])
 		  print(ent1, ent2)
@@ -331,7 +337,7 @@ function test(network, data, params)
 
 		  if true then --new version
 		     if true or params.hierarchy then
-			local class = data.relations:isrelated(idx, ent1, ent2)
+			local class = data.relations:isrelated(idx, ent1, ent2, true)
 			if class==data.relationhash["isAssociatedWith"] then --gold is isAssociatedWith (the only undirected relation)
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
 			      --since isAssociatedWith is undirected, only one true positive isAssociatedWith is counted
@@ -357,15 +363,15 @@ function test(network, data, params)
 			      --same comment as the one above
 			   else --both prediction are "null"
 			      --we only penalythe the model once for not finding isAssociatedWith (since it is undirected)
-			      local class = data.relations:isrelated(idx, ent1, ent2)
+			      local class = data.relations:isrelated(idx, ent1, ent2, true)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
 			   end
 			else --gold is not isAssociatedWith
 			   if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
 			      --since isAssociatedWith is undirected, only one isAssociatedWith is considered
-			      local class1 = data.relations:isrelated(idx, ent1, ent2)
-			      local class2 = data.relations:isrelated(idx, ent2, ent1)
+			      local class1 = data.relations:isrelated(idx, ent1, ent2, true)
+			      local class2 = data.relations:isrelated(idx, ent2, ent1, true)
 			      local class = class1~=data.relationhash["null"] and class1 or class2
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
@@ -373,17 +379,17 @@ function test(network, data, params)
 			      --relation in both direction. Let's choose the best scoring one (the other one is set to "null").
 			      if max_1>max_2 then indice_2 = data.relationhash["null"]
 			      else indice_1 = data.relationhash["null"] end
-			      local class = data.relations:isrelated(idx, ent1, ent2)
+			      local class = data.relations:isrelated(idx, ent1, ent2, true)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
-			      local class = data.relations:isrelated(idx, ent2, ent1)
+			      local class = data.relations:isrelated(idx, ent2, ent1, true)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
 			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 			   else
-			      local class = data.relations:isrelated(idx, ent1, ent2)
+			      local class = data.relations:isrelated(idx, ent1, ent2, true)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
-			      local class = data.relations:isrelated(idx, ent2, ent1)
+			      local class = data.relations:isrelated(idx, ent2, ent1, true)
 			      _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
 			      _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 			   end
@@ -393,14 +399,14 @@ function test(network, data, params)
 		     end
 		  
 		  elseif true then --all relation in both direction
-		     local class = data.relations:isrelated(idx, ent1, ent2)
+		     local class = data.relations:isrelated(idx, ent1, ent2, true)
 		     _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-		     local class = data.relations:isrelated(idx, ent2, ent1)
+		     local class = data.relations:isrelated(idx, ent2, ent1, true)
 		     _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
 
-		     local class = data.relations:isrelated(idx, ent1, ent2)
+		     local class = data.relations:isrelated(idx, ent1, ent2, true)
 		     _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_1])
-		     local class = data.relations:isrelated(idx, ent2, ent1)
+		     local class = data.relations:isrelated(idx, ent2, ent1, true)
 		     _confusion_matrix2(data, params, confusion_matrix2, data.relationhash[class], data.relationhash[indice_2])
 		     
 		     if params.brat then
@@ -422,7 +428,7 @@ function test(network, data, params)
 		  else
 		     if indice_1==data.relationhash["isAssociatedWith"] and indice_2==data.relationhash["isAssociatedWith"] then
 			print("toto")
-			local class = data.relations:isrelated(idx, ent1, ent2)
+			local class = data.relations:isrelated(idx, ent1, ent2, true)
 			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			if params.brat then
 			   if indice_1~=data.relationhash["null"] then
@@ -432,7 +438,7 @@ function test(network, data, params)
 			      relations_predicted[ent1][ent2]=indice_1
 			   end
 			end
-			local class = data.relations:isrelated(idx, ent1, ent2)
+			local class = data.relations:isrelated(idx, ent1, ent2, true)
 			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 			if params.brat then
 			   if indice_1~=data.relationhash["null"] then
@@ -450,9 +456,9 @@ function test(network, data, params)
 			else
 			   indice_1 = data.relationhash["null"]
 			end
-			local class = data.relations:isrelated(idx, ent1, ent2)
+			local class = data.relations:isrelated(idx, ent1, ent2, true)
 			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			local class = data.relations:isrelated(idx, ent2, ent1)
+			local class = data.relations:isrelated(idx, ent2, ent1, true)
 			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
 			if params.brat then
 			   if indice_1~=data.relationhash["null"] then
@@ -471,9 +477,9 @@ function test(network, data, params)
 			   end
 			end
 		     else
-			local class = data.relations:isrelated(idx, ent1, ent2)
+			local class = data.relations:isrelated(idx, ent1, ent2, true)
 			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
-			local class = data.relations:isrelated(idx, ent2, ent1)
+			local class = data.relations:isrelated(idx, ent2, ent1, true)
 			_confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_2)
 			if params.brat then
 			   if indice_1~=data.relationhash["null"] then
@@ -499,7 +505,7 @@ function test(network, data, params)
 		  -- end
 		  
 	       else --not oriented
-		  local class = data.relations:isrelated(idx, ent1, ent2)
+		  local class = data.relations:isrelated(idx, ent1, ent2, true)
 		  _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice_1)
 		  if params.brat then
 		     if indice_1~=data.relationhash["null"] then

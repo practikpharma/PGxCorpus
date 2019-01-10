@@ -821,8 +821,7 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
 		  relations[count][_ent2][_ent1] = hash[_type]
 	       end
 	    end
-	    
-	    
+	    	    
 	    --if relations[count][ent2]==nil then relations[count][ent2]={} end
 	    --relations[count][ent2][ent1] = hash[_type]--, {_type, e2})
 	    --table.insert(rel, {ent1, ent2})
@@ -832,7 +831,8 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
       filename = handle:read()
    end
 
-   relations.isrelated = function(self, nsent, e1, e2)
+   local target = torch.Tensor(#hash)
+   relations.isrelated = function(self, nsent, e1, e2, test)
       if not params.oriented then
 	 assert(e1<e2)
       end
@@ -840,10 +840,20 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
       --print(nsent)
       --print(e1)
       --print(e2)
-      if self[nsent][e1] and self[nsent][e1][e2] and params.onlylabel[ hash[self[nsent][e1][e2]] ] then
-	 return self[nsent][e1][e2]
+      if (not test) and params.trainhierarchy then
+	 target:fill(0)
+	 if self[nsent][e1] and self[nsent][e1][e2] and params.onlylabel[ hash[self[nsent][e1][e2]] ] then
+	    target[1] = self[nsent][e1][e2]
+	 else
+	    target[1] = hash["null"]
+	 end
+	 return target
       else
-	 return hash["null"]
+	 if self[nsent][e1] and self[nsent][e1][e2] and params.onlylabel[ hash[self[nsent][e1][e2]] ] then
+	    return self[nsent][e1][e2]
+	 else
+	    return hash["null"]
+	 end
       end
    end
 
