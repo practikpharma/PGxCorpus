@@ -268,7 +268,11 @@ function test(network, data, params)
 
    local criterion
    if params.trainhierarchy then
-      criterion = nn.MultiLabelMarginCriterion()
+      if params.softmargint then
+	 criterion = nn.MultiLabelSoftMarginCriterion()
+      else
+	 criterion = nn.MultiLabelMarginCriterion()
+      end
    else
       criterion = nn.ClassNLLCriterion()
    end

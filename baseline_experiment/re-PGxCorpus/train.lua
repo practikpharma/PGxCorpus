@@ -68,6 +68,7 @@ cmd:option('-brat', false, "produce gold and prediction files in brat format")
 cmd:option('-onlylabel', '{isAssociatedWith=true,influences=true,isEquivalentTo=true,decreases=true,treats=true,causes=true,increases=true}', 'Only considers the labels given in option')
 cmd:option('-hierarchy', false, "consider entity hierarchy at test time")
 cmd:option('-trainhierarchy', false, "consider entity hierarchy at train time")
+cmd:option('-softmargin', false, "use softmargin instead of margin")
 cmd:option('-anonymize', false, "anonymize entities")
 cmd:option('-notype', false, "do not consider relation type")
 cmd:option('-pgxtype', false, "only consider pgx relationships")
@@ -259,7 +260,12 @@ local networksave = network:getnetsave(params)
 
 local criterion
 if params.trainhierarchy then
-   criterion = nn.MultiLabelMarginCriterion()
+   if params.softmargin then
+      criterion = nn.MultiLabelSoftMarginCriterion()
+   else
+      criterion = nn.MultiLabelMarginCriterion()
+   
+   end
 else
    criterion = nn.ClassNLLCriterion()
 end
