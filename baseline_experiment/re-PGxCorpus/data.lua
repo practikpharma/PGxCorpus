@@ -857,11 +857,11 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
 	    local current = hash[self[nsent][e1][e2]]
 	    while current do
 	       --print(current)
-	       if params.softmargin then
-		  target[ hash[current] ] = 1
-	       else
+	       --if params.softmargin then
+	--	  target[ hash[current] ] = 1
+	       --else
 		  target[i] = hash[current]
-	       end
+	  --     end
 	       current = back_hierarchy_rel[current]
 	       i = i + 1
 	    end
