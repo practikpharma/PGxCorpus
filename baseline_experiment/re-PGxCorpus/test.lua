@@ -181,7 +181,7 @@ end
 
 function _confusion_matrix(data, params, precision_recall, confusion_matrix, class, indice)
    --if data.relationhash[class]=="int" then io.read() end
-   print(class)
+   --print(class)
    precision_recall[class].totalpos = precision_recall[class].totalpos +1
    if equal_rel(data.relationhash[class], data.relationhash[indice], params.hierarchy) then
       precision_recall[class].truepos = precision_recall[class].truepos+1
