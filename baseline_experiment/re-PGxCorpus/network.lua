@@ -250,7 +250,9 @@ function createnetworks(params, data)
       
       network.scorer = nn.Sequential()
       network.scorer:add(nn.Linear(#wszs * params.nhu[1], #data.relationhash))
-      network.scorer:add(nn.LogSoftMax())
+      if not params.trainhierarchy then
+	 network.scorer:add(nn.LogSoftMax())
+      end
       
       network.dropout = dropout
       if params.dropout~=0 and params.dp~=2 then
