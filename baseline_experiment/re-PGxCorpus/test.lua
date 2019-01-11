@@ -270,6 +270,8 @@ function test(network, data, params)
    if params.trainhierarchy then
       if params.softmargint then
 	 criterion = nn.MultiLabelSoftMarginCriterion()
+      elseif params.bcecriterion then
+	 criterion = nn.BCECriterion()
       else
 	 criterion = nn.MultiLabelMarginCriterion()
       end

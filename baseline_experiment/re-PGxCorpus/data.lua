@@ -857,7 +857,7 @@ local function loadrelations(pathdata, extention, maxload, hash, params, entitie
 	    local current = hash[self[nsent][e1][e2]]
 	    while current do
 	       --print(current)
-	       if params.softmargin then
+	       if params.softmargin or params.bcecriterion then
 	       	  target[ hash[current] ] = 1
 	       else
 		  target[i] = hash[current]
