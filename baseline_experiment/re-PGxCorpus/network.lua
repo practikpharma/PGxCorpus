@@ -253,7 +253,8 @@ function createnetworks(params, data)
       if not params.trainhierarchy then
 	 network.scorer:add(nn.LogSoftMax())
       elseif params.softmargin then
-	 network.scorer:add(nn.SoftMax())
+	 network.scorer:add(nn.Sigmoid())
+	 --network.scorer:add(nn.SoftMax())
       end
       
       network.dropout = dropout

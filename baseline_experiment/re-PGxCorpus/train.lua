@@ -502,10 +502,17 @@ while true do
 		     for i=1,output:size(1) do io.write(output[i] .. " ") end; io.write("\n")
 		  end
 
+		  
 		  cost = cost + criterion:forward(output, target)
 		  local grad = criterion:backward(output, target)
 		  --print(grad)
 		  --io.read()
+		  -- print(network.network)
+		  -- print(network.scorer)
+		  -- print(network.scorer.output)
+		  -- print(criterion)
+		  -- print(target)
+		  -- print(grad)
 		  
 		  network:zeroGradParameters()
 		  if params.time then timer2:reset() end
@@ -519,6 +526,18 @@ while true do
 		  end
 		  if params.time then timebackward = timebackward + timer2:time().real end
 
+		  -- if params.arch=="mccnn" then
+		  --    output = network:forward(input)
+		  -- elseif params.arch=="treelstm" then
+		  --    local t =  data.trees.gettrees(data, idx, idx_ent_1, idx_ent_2)
+		  --    --printw(input[1], data.wordhash)
+		  --    --t:print()
+		  --    output = network:forward(t, input)
+		  -- else
+		  --    error("")
+		  -- end
+		  -- print(network.scorer.output)
+		  -- io.read()
 		  
 		  if params.debug2 then
 		     local max, indice = output:max(1)--caution: comment this!!!!!!!!!!!!!!
