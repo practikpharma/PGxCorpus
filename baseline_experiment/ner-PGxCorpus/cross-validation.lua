@@ -103,11 +103,13 @@ for i=1,#tdata.entityhash do
    local avg_r = torch.Tensor(tab_res[ent].recall):mean()
    local avg_f1 = torch.Tensor(tab_res[ent].f1):mean()
    local std_f1 = f_std(tab_res[ent].f1, avg_f1)
-   print("p\t" .. string.format("%.2f",avg_p*100) .. "\tr\t" .. string.format("%.2f",avg_r*100) .. "\tf1\t" .. string.format("%.2f",avg_f1*100) .. " ( " .. string.format("%.2f",std_f1*100) .. " )\t" .. ent)
+   --print("p\t" .. string.format("%.2f",avg_p*100) .. "\tr\t" .. string.format("%.2f",avg_r*100) .. "\tf1\t" .. string.format("%.2f",avg_f1*100) .. " ( " .. string.format("%.2f",std_f1*100) .. " )\t" .. ent)
+   print("" .. string.format("%.2f",avg_p*100) .. " & " .. string.format("%.2f",avg_r*100) .. " & " .. string.format("%.2f",avg_f1*100) .. " (" .. string.format("%.2f",std_f1*100) .. ")\t" .. ent)
 end
 
 local avg_p = torch.Tensor(tab_res.macro.precision):mean()
 local avg_r = torch.Tensor(tab_res.macro.recall):mean()
 local avg_f1 = torch.Tensor(tab_res.macro.f1):mean()
 local std_f1 = f_std(tab_res.macro.f1, avg_f1)
-print("p\t" .. string.format("%.2f",avg_p*100) .. "\tr\t" .. string.format("%.2f",avg_r*100) .. "\tf1\t" .. string.format("%.2f",avg_f1*100) .. " ( " .. string.format("%.2f",std_f1*100) .. " )\t" .. "macro")
+--print("p\t" .. string.format("%.2f",avg_p*100) .. "\tr\t" .. string.format("%.2f",avg_r*100) .. "\tf1\t" .. string.format("%.2f",avg_f1*100) .. " ( " .. string.format("%.2f",std_f1*100) .. " )\t" .. "macro")
+print("" .. string.format("%.2f",avg_p*100) .. " & " .. string.format("%.2f",avg_r*100) .. " & " .. string.format("%.2f",avg_f1*100) .. " (" .. string.format("%.2f",std_f1*100) .. ")\t" .. "macro")
