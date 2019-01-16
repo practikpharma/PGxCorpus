@@ -72,7 +72,7 @@ while _file and nnetwork<params.maxnet do
    tdata = extract_data(data, paramsModel.validp, paramsModel.valids, true)
    subtraindata = extract_data(data, paramsModel.validp, paramsModel.valids, false)
 
-   
+   if not paramsModel.arch then paramsModel.arch="mccnn" end
    local network = createnetworks(paramsModel,data)
    local net = f:readObject()
    network:loadnet(paramsModel, net)
