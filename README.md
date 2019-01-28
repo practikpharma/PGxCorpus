@@ -1,13 +1,13 @@
 # PGxCorpus
 
 PGxCorpus is a manually annotated corpus, designed for the extraction of pharmacogenomic realtions from text. 
-It is composed of 993 sentences mannually annotated, issued from 958 distinct PubMed abstracts. 
+It is composed of 945 sentences mannually annotated, issued from 911 distinct PubMed abstracts. 
 Annotation has been achieved by 11 annotators, including 5 senior annotators. 
 Each sentence has been seen independently by 2 annotators, in a first phase, and by a third senior annotator, in a second phase.  
 
 * PGxCorpus is in the file [PGxCorpus.tar](PGxCorpus.tar), in the Brat file format. 
 * It can be browsed on our Brat server at https://pgxcorpus.loria.fr/.
-* It is also available on [FigShare](in preparation).
+* It is also available on [FigShare](https://figshare.com/s/9d315cec6bb629d04210).
 
 ## Annotation guidelines
 
