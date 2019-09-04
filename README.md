@@ -25,9 +25,6 @@ In preparation.
 
 PGxCorpus is under [Creative Commons BY NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
-## References
-
-1. in preparation
 
 ## Acknowledgments
 
