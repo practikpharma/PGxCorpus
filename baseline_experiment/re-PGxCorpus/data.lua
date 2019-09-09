@@ -550,6 +550,7 @@ local function loadindices(filename, maxload)
 end
 
 local function loadwords(pathdata, hash, addraw, feature, maxload)
+
    maxidx = maxidx or #hash
    local lines = addraw and {} or nil
    local indices = {}

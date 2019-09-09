@@ -101,8 +101,6 @@ params.onlylabel = loadstring("return " .. params.onlylabel)()
 
 local restartparams = loadstring("return " .. params.restartparams)()
 
-
-
 local frestart
 local rundir
 local expidx = 0
@@ -221,6 +219,7 @@ end
 
 
 print("creating network")
+if not params.arch then params.arch="mccnn" end
 local network = createnetworks(params,data)
 
 if frestart then
@@ -235,15 +234,17 @@ if frestart then
       print('done')
    end
    -- print("now testing")
-   -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, vdata, params)
-   -- print("Valid_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
-   -- print("Valid_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
-   
+   params.brat = true
+   local tab = test(network, tdata, params)
+   print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
+   print("Test_micro: " .. tab.micro_avg.precision .. " " .. tab.micro_avg.recall .. " " .. tab.micro_avg.f1)
+   print(params.best)
+   exit()
    -- local macro_p,macro_r,macro_f1,c,micro_p,micro_r,micro_f1 = test(network, tdata, params)
    -- print("Test_macro: " .. macro_p .. " " .. macro_r .. " " .. macro_f1)
    -- print("Test_micro: " .. micro_p .. " " .. micro_r .. " " .. micro_f1)
    --params.brat = true
-   params.hierarchy=false
+   params.hierarchy=true
    print("now testing")
    local tab = test(network, tdata, params)
    print("Test_macro: " .. tab.macro_avg.precision .. " " .. tab.macro_avg.recall .. " " .. tab.macro_avg.f1)
