@@ -399,7 +399,11 @@ function getdag(ent)
    for ent1=1,#ent do
       for ent2=1,#ent do
 	 --print("=====================================> " .. ent1 .. " " .. ent2)
-	 if ent1~=ent2 and is_included(ent[ent1][1], ent[ent2][1]) then
+	 if ent1~=ent2 and is_included(ent[ent1][1], ent[ent2][1]) and is_included(ent[ent2][1], ent[ent1][1]) then
+	    if ent1<ent2 then
+	       table.insert(ent[ent2].sons, ent[ent1])
+	    end
+	 elseif ent1~=ent2 and is_included(ent[ent1][1], ent[ent2][1]) then
 	    --print(ent1 .. " is included in " .. ent2)
 	    table.insert(ent[ent2].sons, ent[ent1])
 	    --io.read()
@@ -912,7 +916,8 @@ function loadhash(params)
    
 end
 
-function createdata(params)
+function createdata(params, decodeonly)
+   decodeonly = decodeonly or false
    
    local pathdata = params.data
    
@@ -929,7 +934,6 @@ function createdata(params)
 
    loaddag(entities)
 
-   
    local relations = loadrelations(pathdata, ".ann", params.maxload, relationhash, params, entities)
    
    -- local idx

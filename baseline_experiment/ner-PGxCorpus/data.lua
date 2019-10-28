@@ -308,6 +308,7 @@ local function wordfeature(word)
 end
 
 local function loadwords(pathdata, hash, addraw, feature, maxload)
+   print("loading words in " .. pathdata)
    maxidx = maxidx or #hash
    local lines = addraw and {} or nil
    local indices = {}
@@ -318,7 +319,8 @@ local function loadwords(pathdata, hash, addraw, feature, maxload)
    local filename = handle:read()
    while filename do
       --print(string.format('loading <%s>', filename))
-      for line in io.lines(filename) do
+      local file = io.open(filename) 
+      for line in file:lines() do
 	 --print(line)
 	 table.insert(sentences, line)
 	 if line~="" then
@@ -342,6 +344,7 @@ local function loadwords(pathdata, hash, addraw, feature, maxload)
 	    table.insert(indices, torch.IntTensor(wordsidx))
 	 end
       end
+      file:close()
       filename = handle:read()
       if _break then print("break 1"); break end
    end
@@ -360,7 +363,8 @@ local function loadstartend(pathdata, feature, maxload)
    local filename = handle:read()
    while filename do
       --print(string.format('loading startend for <%s>', filename))
-      for line in io.lines(filename) do
+      local file = io.open(filename) 
+      for line in file:lines() do
 	 --print(line)
 	 if maxload and maxload > 0 and maxload == #starts then break end
 	 if line~="" then
@@ -382,6 +386,7 @@ local function loadstartend(pathdata, feature, maxload)
 	 end
 	 --io.read()
       end
+      file:close()
       filename = handle:read()
    end
    handle:close()
@@ -622,10 +627,10 @@ local marmothash
 local marmothashes
 local level1hash
 
-function createdata(params)
+function createdata(params, decodeonly)
+   decodeonly = decodeonly or false
    local data = {}
 
-   local path = "data/"
    local pathdata = params.data
    
    wordhash = wordhash or loadhash('data/hash/word.txt', params.nword)
@@ -634,23 +639,6 @@ function createdata(params)
    entityhash = entityhash or loadhash('data/hash/' .. params.task .. '.txt')
    pubtatorhash = pubtatorhash or loadhash('data/hash/pubtator-bioes.txt')
 
-   -- if params.hierarchy==1 then
-   --    local tab = {Phenotype="Phenotype", Disease="Phenotype", Pharmacokinetic_phenotype="Phenotype", Pharmacodynamic_phenotype="Phenotype", Genomic_factor="Genomic_factor", Genomic_variation="Genomic_factor", Gene_or_protein="Genomic_factor", Limited_variation="Genomic_factor", Haplotype="Genomic_factor", Chemical="Chemical"}
-   --    for i=1,#chunkhash-1 do -- -1 for other
-   -- 	 local bies = chunkhash[i]:match("([BIES])%-")
-   -- 	 local tag = chunkhash[i]:match("[BIES]%-(.*)")
-   -- 	 chunkhash[ chunkhash[i] ] = chunkhash[ bies .. "-" .. tab[tag] ]
-   --    end
-   -- elseif params.hierarchy==2 then
-   --    local tab = {Phenotype="Phenotype", Disease="Phenotype", Pharmacokinetic_phenotype="Phenotype", Pharmacodynamic_phenotype="Phenotype", Genomic_factor="Genomic_variation", Genomic_variation="Genomic_variation", Gene_or_protein="Gene_or_protein", Limited_variation="Genomic_variation", Haplotype="Genomic_variation", Chemical="Chemical"}
-   --    for i=1,#chunkhash-1 do -- -1 for other
-   -- 	 local bies = chunkhash[i]:match("([BIES])%-")
-   -- 	 local tag = chunkhash[i]:match("[BIES]%-(.*)")
-   -- 	 chunkhash[ chunkhash[i] ] = chunkhash[ bies .. "-" .. tab[tag] ]
-   --    end
-   -- end
-   
-   
    local words, caps, tags, chunks, marmottags, starts, ends, chars, putators, level1
 
    local file
@@ -666,25 +654,30 @@ function createdata(params)
    starts, ends = loadstartend(pathdata, nil, params.maxload, names)
 
    local names = loadnames(pathdata, params.maxload)
-   
-   local entities = loadentities(pathdata, ".ann",  params.maxload)
-   onlylabel(entities, params.onlylabel)
-   loaddag(entities)
-   if params.levelmax~=math.huge then levelmax(entities, params.levelmax) end
-   
-   load_entity_indices(entities, words, starts, ends, names, wordhash)
-   local labels = extract_pred_labels(entities, words, (params.wsz-1)/2, labelhash)
-   local labels_input = extract_input_labels(entities, words, (params.wsz-1)/2, labelhash)
-   
+
+   local entities, labels, labels_input
+
+   if not decodeonly then
+      entities = loadentities(pathdata, ".ann",  params.maxload)
+      onlylabel(entities, params.onlylabel)
+      loaddag(entities)
+      if params.levelmax~=math.huge then levelmax(entities, params.levelmax) end
+
+      load_entity_indices(entities, words, starts, ends, names, wordhash)
+      labels = extract_pred_labels(entities, words, (params.wsz-1)/2, labelhash)
+      labels_input = extract_input_labels(entities, words, (params.wsz-1)/2, labelhash)
+
+   end
+      
    local entities_pubtator = loadentities(pathdata, ".ann_pubtator",  params.maxload)
    loaddag(entities_pubtator)
    load_entity_indices(entities_pubtator, words, starts, ends, names, wordhash)
-   local labels_pubtator = extract_pred_labels(entities_pubtator, words, (params.wsz-1)/2, pubtatorhash)
+   local labels_pubtator = extract_pred_labels(entities_pubtator, words, (params.wsz-1)/2, pubtatorhash)      
    
    for i=1,#labels_pubtator do
       assert(#labels_pubtator[i]==2) --pubtator entries + 
    end
-   
+      
    return {entityhash=entityhash, entities=entities, labels=labels, labels_input=labels_input, names=names, wordsupper=wordsupper, genedict=genedict, words=words, caps=caps, tags=tags, chunks=chunks, wordhash=wordhash, chunkhash=chunkhash, labelhash=labelhash, taghash=taghash, size=#words.idx, marmothashes=marmothashes, marmottags=marmottags, marmothash=marmothash, starts=starts, ends=ends, labels_pubtator=labels_pubtator, pubtatorhash=pubtatorhash, level1=level1, level1hash=level1hash, getdag=getdag, setlevel=setlevel, _extract_input_labels=_extract_input_labels, _load_entity_indices=_load_entity_indices, clean_entities=clean_entities}
 end
 
